@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>OpenMathBoard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+</head>
+<body>
+  <!-- Top Toolbar -->
+  <header class="toolbar">
+    <div class="toolbar-left">
+      <!-- Logo (always visible) -->
+      <a href="/" class="toolbar-logo" data-i18n-title="backToHome" title="OpenMathBoard">
+        <img src="logo.svg" alt="OpenMathBoard">
+      </a>
+      <div class="toolbar-divider desktop-only"></div>
+      <button id="undoBtn" class="toolbar-btn desktop-only" data-i18n-title="undoTitle" title="Undo (Ctrl+Z)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 10h10a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H8M3 10l4-4M3 10l4 4"/>
+        </svg>
+      </button>
+      <button id="redoBtn" class="toolbar-btn desktop-only" data-i18n-title="redoTitle" title="Redo (Ctrl+Shift+Z)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 10H11a5 5 0 0 0-5 5v0a5 5 0 0 0 5 5h5M21 10l-4-4M21 10l-4 4"/>
+        </svg>
+      </button>
+      
+      <!-- Mobile Tools Section (visible on narrow screens) -->
+      <div class="mobile-tools">
+        <div class="toolbar-divider"></div>
+        <button id="undoBtnMobile" class="toolbar-btn" data-i18n-title="undoTitle" title="Undo" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 10h10a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H8M3 10l4-4M3 10l4 4"/>
+          </svg>
+        </button>
+        <button id="redoBtnMobile" class="toolbar-btn" data-i18n-title="redoTitle" title="Redo" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10H11a5 5 0 0 0-5 5v0a5 5 0 0 0 5 5h5M21 10l-4-4M21 10l-4 4"/>
+          </svg>
+        </button>
+        <div class="toolbar-divider"></div>
+        <button id="penBtnMobile" class="toolbar-btn active" data-i18n-title="penTitle" title="Pen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+            <path d="M2 2l7.586 7.586"/>
+          </svg>
+        </button>
+        <button id="eraserBtnMobile" class="toolbar-btn" data-i18n-title="eraserTitle" title="Eraser">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 20H9L4 15a1 1 0 0 1 0-1.4l9.6-9.6a1 1 0 0 1 1.4 0l6.6 6.6a1 1 0 0 1 0 1.4L16 18"/>
+            <path d="M6.5 12.5L14 5"/>
+          </svg>
+        </button>
+        <button id="selectBtnMobile" class="toolbar-btn" data-i18n-title="selectTitle" title="Select">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 3l14 9-6 1-3 6-5-16z"/>
+          </svg>
+        </button>
+        <div class="toolbar-divider"></div>
+        <!-- Color Picker Mobile -->
+        <div class="color-picker">
+          <button id="colorBtnMobile" class="toolbar-btn color-btn" data-i18n-title="colorTitle" title="Color">
+            <span class="color-indicator" style="background: #000000"></span>
+          </button>
+          <div class="color-dropdown color-dropdown-mobile" id="colorDropdownMobile">
+            <button class="color-option active" data-color="#000000" style="background: #000000"></button>
+            <button class="color-option" data-color="#2563eb" style="background: #2563eb"></button>
+            <button class="color-option" data-color="#dc2626" style="background: #dc2626"></button>
+            <button class="color-option" data-color="#16a34a" style="background: #16a34a"></button>
+            <button class="color-option" data-color="#9333ea" style="background: #9333ea"></button>
+            <button class="color-option" data-color="#ea580c" style="background: #ea580c"></button>
+          </div>
+        </div>
+        <!-- Stroke Width Mobile -->
+        <div class="stroke-picker">
+          <button id="strokeBtnMobile" class="toolbar-btn" data-i18n-title="strokeWidthTitle" title="Stroke Width">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <line x1="4" y1="8" x2="20" y2="8" stroke="currentColor" stroke-width="1"/>
+              <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"/>
+              <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="4"/>
+            </svg>
+          </button>
+          <div class="stroke-dropdown stroke-dropdown-mobile" id="strokeDropdownMobile">
+            <button class="stroke-option" data-width="2"><span class="stroke-preview" style="height: 2px"></span></button>
+            <button class="stroke-option active" data-width="4"><span class="stroke-preview" style="height: 4px"></span></button>
+            <button class="stroke-option" data-width="8"><span class="stroke-preview" style="height: 8px"></span></button>
+          </div>
+        </div>
+        <!-- Smart Shapes Mobile -->
+        <div class="smart-shape-picker">
+          <button id="smartShapeBtnMobile" class="toolbar-btn" data-i18n-title="smartShapesTitle" title="Smart Shapes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l1.8 6.1L20 10l-6.2 1.9L12 18l-1.8-6.1L4 10l6.2-1.9L12 2z"/>
+              <path d="M5 20l.9-3.1L9 16l-3.1-.9L5 12l-.9 3.1L1 16l3.1.9L5 20z"/>
+            </svg>
+          </button>
+          <div class="smart-shape-dropdown smart-shape-dropdown-mobile" id="smartShapeDropdownMobile">
+            <div class="smart-shape-row">
+              <label class="smart-shape-toggle">
+                <input type="checkbox" id="smartShapeToggleMobile" checked>
+                <span data-i18n="smartShapes">Smart Shapes</span>
+              </label>
+            </div>
+            <div class="smart-shape-row smart-shape-row-slider">
+              <label class="smart-shape-label" for="smartShapeSensitivityMobile" data-i18n="sensitivity">Sensitivity</label>
+              <input type="range" id="smartShapeSensitivityMobile" min="0" max="100" value="50" step="1">
+              <span class="smart-shape-value" id="smartShapeValueMobile">50</span>
+            </div>
+            <div class="smart-shape-presets">
+              <button class="smart-shape-preset" type="button" data-value="20">Low</button>
+              <button class="smart-shape-preset active" type="button" data-value="50">Med</button>
+              <button class="smart-shape-preset" type="button" data-value="85">High</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Tools (hidden on narrow screens) -->
+    <div class="toolbar-center desktop-only">
+      <button id="penBtn" class="toolbar-btn active" data-i18n-title="penTitle" title="Pen Tool (P)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+          <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+          <path d="M2 2l7.586 7.586"/>
+        </svg>
+      </button>
+      <button id="eraserBtn" class="toolbar-btn" data-i18n-title="eraserTitle" title="Eraser (E)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 20H9L4 15a1 1 0 0 1 0-1.4l9.6-9.6a1 1 0 0 1 1.4 0l6.6 6.6a1 1 0 0 1 0 1.4L16 18"/>
+          <path d="M6.5 12.5L14 5"/>
+        </svg>
+      </button>
+      <button id="selectBtn" class="toolbar-btn" data-i18n-title="selectTitle" title="Select (S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 3l14 9-6 1-3 6-5-16z"/>
+        </svg>
+      </button>
+      <div class="toolbar-divider"></div>
+      
+      <!-- Color Picker -->
+      <div class="color-picker">
+        <button id="colorBtn" class="toolbar-btn color-btn" data-i18n-title="colorTitle" title="Color">
+          <span class="color-indicator" style="background: #000000"></span>
+        </button>
+        <div class="color-dropdown" id="colorDropdown">
+          <button class="color-option active" data-color="#000000" style="background: #000000" data-i18n-title="colorBlack" title="Black"></button>
+          <button class="color-option" data-color="#2563eb" style="background: #2563eb" data-i18n-title="colorBlue" title="Blue"></button>
+          <button class="color-option" data-color="#dc2626" style="background: #dc2626" data-i18n-title="colorRed" title="Red"></button>
+          <button class="color-option" data-color="#16a34a" style="background: #16a34a" data-i18n-title="colorGreen" title="Green"></button>
+          <button class="color-option" data-color="#9333ea" style="background: #9333ea" data-i18n-title="colorPurple" title="Purple"></button>
+          <button class="color-option" data-color="#ea580c" style="background: #ea580c" data-i18n-title="colorOrange" title="Orange"></button>
+        </div>
+      </div>
+
+      <!-- Stroke Width -->
+      <div class="stroke-picker">
+        <button id="strokeBtn" class="toolbar-btn" data-i18n-title="strokeWidthTitle" title="Stroke Width">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <line x1="4" y1="8" x2="20" y2="8" stroke="currentColor" stroke-width="1"/>
+            <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"/>
+            <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="4"/>
+          </svg>
+        </button>
+        <div class="stroke-dropdown" id="strokeDropdown">
+          <button class="stroke-option" data-width="2" data-i18n-title="strokeThin" title="Thin">
+            <span class="stroke-preview" style="height: 2px"></span>
+          </button>
+          <button class="stroke-option active" data-width="4" data-i18n-title="strokeMedium" title="Medium">
+            <span class="stroke-preview" style="height: 4px"></span>
+          </button>
+          <button class="stroke-option" data-width="8" data-i18n-title="strokeThick" title="Thick">
+            <span class="stroke-preview" style="height: 8px"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Smart Shapes -->
+      <div class="smart-shape-picker">
+        <button id="smartShapeBtn" class="toolbar-btn" data-i18n-title="smartShapesTitle" title="Smart Shapes (G)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l1.8 6.1L20 10l-6.2 1.9L12 18l-1.8-6.1L4 10l6.2-1.9L12 2z"/>
+            <path d="M5 20l.9-3.1L9 16l-3.1-.9L5 12l-.9 3.1L1 16l3.1.9L5 20z"/>
+          </svg>
+        </button>
+        <div class="smart-shape-dropdown" id="smartShapeDropdown">
+          <div class="smart-shape-row">
+            <label class="smart-shape-toggle">
+              <input type="checkbox" id="smartShapeToggle" checked>
+              <span data-i18n="smartShapes">Smart Shapes</span>
+            </label>
+          </div>
+          <div class="smart-shape-row smart-shape-row-slider">
+            <label class="smart-shape-label" for="smartShapeSensitivity" data-i18n="sensitivity">Sensitivity</label>
+            <input type="range" id="smartShapeSensitivity" min="0" max="100" value="50" step="1">
+            <span class="smart-shape-value" id="smartShapeValue">50</span>
+          </div>
+          <div class="smart-shape-presets">
+            <button class="smart-shape-preset" type="button" data-value="20" data-i18n="low" data-i18n-title="sensitivityLow" title="Low Sensitivity">Low</button>
+            <button class="smart-shape-preset active" type="button" data-value="50" data-i18n="medium" data-i18n-title="sensitivityMedium" title="Medium Sensitivity">Med</button>
+            <button class="smart-shape-preset" type="button" data-value="85" data-i18n="high" data-i18n-title="sensitivityHigh" title="High Sensitivity">High</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <!-- Desktop-only action buttons -->
+      <button id="importBtn" class="toolbar-btn desktop-only" data-i18n-title="importTitle" title="Import Image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="M21 15l-5-5L5 21"/>
+        </svg>
+      </button>
+      <button id="clearBtn" class="toolbar-btn desktop-only" data-i18n-title="clearTitle" title="Clear Canvas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+        </svg>
+      </button>
+      <div class="toolbar-divider desktop-only"></div>
+      <button id="copyBtn" class="toolbar-btn desktop-only" data-i18n-title="copyTitle" title="Copy to Clipboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      </button>
+      <button id="saveBtn" class="toolbar-btn desktop-only" data-i18n-title="saveTitle" title="Save Image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </button>
+      <div class="toolbar-divider desktop-only"></div>
+      <!-- Language Switcher (desktop) -->
+      <div class="lang-picker desktop-only">
+        <button id="langBtn" class="toolbar-btn" data-i18n-title="languageTitle" title="Language">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </button>
+        <div class="lang-dropdown" id="langDropdown">
+          <button class="lang-option active" data-lang="en" data-i18n-title="switchToEnglish" title="Switch to English">English</button>
+          <button class="lang-option" data-lang="zh" data-i18n-title="switchToChinese" title="切换到中文">中文</button>
+        </div>
+      </div>
+      
+      <!-- Hamburger Menu (visible on narrow screens) -->
+      <div class="menu-wrapper">
+        <button id="menuBtn" class="toolbar-btn menu-btn" data-i18n-title="menuTitle" title="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <div class="menu-dropdown" id="menuDropdown">
+          <button class="menu-option" data-action="import">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="M21 15l-5-5L5 21"/>
+            </svg>
+            <span data-i18n="importImage">Import Image</span>
+          </button>
+          <button class="menu-option" data-action="clear">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            </svg>
+            <span data-i18n="clearCanvas">Clear Canvas</span>
+          </button>
+          <div class="menu-divider"></div>
+          <button class="menu-option" data-action="copy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span data-i18n="copyToClipboard">Copy to Clipboard</span>
+          </button>
+          <button class="menu-option" data-action="save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span data-i18n="saveImage">Save Image</span>
+          </button>
+          <div class="menu-divider"></div>
+          <button class="menu-option" data-action="lang-en">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            <span>English</span>
+          </button>
+          <button class="menu-option" data-action="lang-zh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            <span>中文</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Canvas Container -->
+  <main class="canvas-container" id="canvasContainer">
+    <!-- Hero / Welcome Section -->
+    <div class="hero-section" id="heroSection">
+      <div class="hero-content">
+        <div class="hero-icon">
+          <img src="logo.svg" alt="OpenMathBoard">
+        </div>
+        <h2 class="hero-title"><span data-i18n="heroTitle">Welcome to</span> <span class="hero-brand" data-i18n="heroBrandName">OpenMathBoard</span></h2>
+        <p class="hero-subtitle" data-i18n="heroSubtitle">A simple canvas for teaching math concepts</p>
+        
+        <div class="hero-features">
+          <div class="hero-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+              <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+            </svg>
+            <span data-i18n="heroFeatureDraw">Draw anywhere to start</span>
+          </div>
+          <div class="hero-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l1.8 6.1L20 10l-6.2 1.9L12 18l-1.8-6.1L4 10l6.2-1.9L12 2z"/>
+            </svg>
+            <span data-i18n="heroFeatureShapes">Smart shapes auto-correct your drawings</span>
+          </div>
+        </div>
+
+        <div class="hero-divider">
+          <span data-i18n="heroOr">or import an image</span>
+        </div>
+        
+        <div class="hero-import-section">
+          <button id="heroImportBtn" class="hero-import-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="M21 15l-5-5L5 21"/>
+            </svg>
+            <span data-i18n="heroImportBtn">Import Image</span>
+          </button>
+          <p class="hero-hint" data-i18n="heroHint">Drop image here, paste, or click to import</p>
+          <p class="hero-formats" data-i18n="heroFormats">Supports JPG, PNG, GIF, and WebP</p>
+        </div>
+      </div>
+    </div>
+    <!-- Imported images layer -->
+    <div class="images-layer" id="imagesLayer"></div>
+    <!-- Drawing canvas -->
+    <canvas id="drawingCanvas"></canvas>
+    <!-- Drop zone overlay -->
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-content">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="M21 15l-5-5L5 21"/>
+        </svg>
+        <p data-i18n="dropZoneText">Drop image here or paste from clipboard</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Hidden file input -->
+  <input type="file" id="fileInput" accept="image/*" style="display: none">
+
+  <!-- Status toast -->
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

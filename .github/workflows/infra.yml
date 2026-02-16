@@ -1,0 +1,117 @@
+name: Deploy Infrastructure
+
+# ─── Required GitHub Secrets ─────────────────────────────────────────────────
+# AZURE_CREDENTIALS          — Service principal JSON (az ad sp create-for-rbac)
+# AZURE_RESOURCE_GROUP       — Target resource group name
+#
+# ─── Required GitHub Variables (Settings → Secrets and variables → Variables) ─
+# DOMAIN_NAME                — Custom domain (e.g. lezhi.school)
+# ALERT_EMAIL                — Email for Azure Monitor alert notifications
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - what-if
+
+jobs:
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep (what-if)
+        if: inputs.action == 'what-if'
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --template-file infra/main.bicep \
+            --parameters \
+              domainName='${{ vars.DOMAIN_NAME }}' \
+              alertEmail='${{ vars.ALERT_EMAIL }}' \
+              location='westus3'
+
+      - name: Deploy Bicep
+        if: inputs.action == 'deploy'
+        run: |
+          az deployment group create \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --template-file infra/main.bicep \
+            --parameters \
+              domainName='${{ vars.DOMAIN_NAME }}' \
+              alertEmail='${{ vars.ALERT_EMAIL }}' \
+              location='westus3' \
+            --verbose
+
+      - name: Show outputs
+        if: inputs.action == 'deploy'
+        run: |
+          az deployment group show \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs
+
+      - name: Configure custom domains
+        if: inputs.action == 'deploy' && vars.DOMAIN_NAME != ''
+        run: |
+          DOMAIN="${{ vars.DOMAIN_NAME }}"
+          RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
+          APP="openmathboard-app"
+          ENV="openmathboard-env"
+
+          # Check if custom domains are already bound with certs
+          BOUND=$(az containerapp hostname list --name $APP --resource-group $RG \
+            --query "[?bindingType=='SniEnabled']" -o tsv 2>/dev/null | wc -l)
+          if [ "$BOUND" -ge 1 ]; then
+            echo "Custom domains already configured with certs, skipping."
+            exit 0
+          fi
+
+          echo "=== Step 1: Add hostname without cert binding ==="
+          az containerapp hostname add --name $APP --resource-group $RG --hostname "$DOMAIN" 2>/dev/null || true
+
+          echo "=== Step 2: Create managed certificate ==="
+          az containerapp env certificate create \
+            --name $ENV --resource-group $RG \
+            --hostname "$DOMAIN" --validation-method HTTP 2>/dev/null || true
+
+          echo "=== Step 3: Wait for certificate to provision (up to 5 min) ==="
+          for i in $(seq 1 30); do
+            CERT_STATE=$(az containerapp env certificate list --name $ENV --resource-group $RG \
+              --query "[?properties.subjectName=='$DOMAIN'].properties.provisioningState" -o tsv | head -1)
+            echo "  Attempt $i/30: cert=$CERT_STATE"
+            if [ "$CERT_STATE" = "Succeeded" ]; then
+              echo "  Cert ready!"
+              break
+            fi
+            if [ "$CERT_STATE" = "Failed" ]; then
+              echo "  Warning: Cert failed. Check DNS records and re-run this workflow."
+              break
+            fi
+            sleep 10
+          done
+
+          echo "=== Step 4: Bind certificate to hostname ==="
+          CERT_ID=$(az containerapp env certificate list --name $ENV --resource-group $RG \
+            --query "[?properties.subjectName=='$DOMAIN' && properties.provisioningState=='Succeeded'].id" -o tsv | head -1)
+
+          if [ -n "$CERT_ID" ]; then
+            az containerapp hostname bind --name $APP --resource-group $RG --hostname "$DOMAIN" --certificate "$CERT_ID" || true
+            echo "  Bound $DOMAIN"
+          else
+            echo "  Warning: Cert not ready — re-run this workflow after DNS propagates"
+          fi
+
+          echo "=== Done ==="
+          az containerapp hostname list --name $APP --resource-group $RG -o table

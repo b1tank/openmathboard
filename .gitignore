@@ -1,0 +1,12 @@
+.env
+.DS_Store
+
+# Azure Bicep real params (keep .example only)
+infra/main.bicepparam
+infra/*.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

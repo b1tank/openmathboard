@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Whiteboard/Canvas background -->
+  <rect x="6" y="12" width="52" height="40" rx="4" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  
+  <!-- Math equation hint (sigma symbol) -->
+  <text x="13" y="37" font-family="serif" font-size="25" font-weight="bold" fill="#2563eb">Σ</text>
+  
+  <!-- Pen drawing a curve -->
+  <path d="M50 22 Q39 60 17 41" stroke="#dc2626" stroke-width="3" stroke-linecap="round" fill="none"/>
+  
+  <!-- Pen tool - tip at sigma bottom, eraser toward parabola right end -->
+  <g transform="translate(33, 29) rotate(-130)">
+    <rect x="-3" y="0" width="6" height="18" rx="1" fill="#6b7280"/>
+    <polygon points="-3,0 3,0 0,-5" fill="#6b7280"/>
+    <rect x="-3" y="16" width="6" height="4" rx="1" fill="#9ca3af"/>
+  </g>
+</svg>

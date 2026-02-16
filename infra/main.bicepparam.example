@@ -1,0 +1,10 @@
+using './main.bicep'
+
+// Custom domain for the site
+param domainName = 'yourdomain.com'
+
+// Email address for Azure Monitor alert notifications
+param alertEmail = 'your-email@example.com'
+
+// Azure region — all resources deploy here
+param location = 'westus3'
