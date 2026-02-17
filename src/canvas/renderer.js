@@ -66,10 +66,10 @@ export function redrawCanvas() {
 	const selected = getSelectedStrokes();
 	if (selected.length > 0) {
 		drawSelectionHighlights(ctx, strokes, selected, camera);
-		// Draw anchors for selected shapes
+		// Draw anchors for selected strokes (shapes get special+general, freehand gets general only)
 		for (const idx of selected) {
 			const stroke = strokes[idx];
-			if (stroke && stroke.shape) {
+			if (stroke) {
 				renderAnchors(ctx, stroke, camera);
 			}
 		}

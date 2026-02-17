@@ -65,9 +65,9 @@ export function getSpecialAnchors(obj) {
 			];
 		case 'parabola':
 			return [
-				{ id: 'vertex', x: obj.shape.h, y: obj.shape.k, type: 'center' },
-				{ id: 'left', x: obj.shape.xMin, y: obj.shape.a * (obj.shape.xMin - obj.shape.h) ** 2 + obj.shape.k, type: 'curve' },
-				{ id: 'right', x: obj.shape.xMax, y: obj.shape.a * (obj.shape.xMax - obj.shape.h) ** 2 + obj.shape.k, type: 'curve' },
+				{ id: 'vertex', x: obj.shape.h, y: obj.shape.k, type: 'curve' },
+				{ id: 'left', x: obj.shape.xMin, y: obj.shape.a * (obj.shape.xMin - obj.shape.h) ** 2 + obj.shape.k, type: 'endpoint' },
+				{ id: 'right', x: obj.shape.xMax, y: obj.shape.a * (obj.shape.xMax - obj.shape.h) ** 2 + obj.shape.k, type: 'endpoint' },
 			];
 		case 'sine':
 		case 'cosine': {
@@ -126,7 +126,7 @@ export function getSpecialAnchors(obj) {
 
 // ============ Anchor drag handling ============
 
-export function onAnchorDrag(obj, anchorId, newWorldPos) {
+export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 	if (!obj) return;
 
 	// General anchors (stretch / rotation)
@@ -152,13 +152,38 @@ export function onAnchorDrag(obj, anchorId, newWorldPos) {
 			if (anchorId === 'ry') { obj.shape.ry = Math.max(5, Math.abs(newWorldPos.y - obj.shape.cy)); }
 			break;
 		case 'parabola':
-			if (anchorId === 'vertex') { obj.shape.h = newWorldPos.x; obj.shape.k = newWorldPos.y; }
+			if (anchorId === 'vertex') {
+				// Move vertex with both endpoint x-positions fixed.
+				// Recalculate 'a' so the curve passes through the saved endpoint y-values.
+				const newH = Math.max(obj.shape.xMin + 1, Math.min(obj.shape.xMax - 1, newWorldPos.x));
+				const newK = newWorldPos.y;
+				obj.shape.h = newH;
+				obj.shape.k = newK;
+				// Solve for 'a' using saved endpoint y-values from drag start
+				if (dragInfo && dragInfo.savedEndpointYLeft !== undefined) {
+					const dxL = obj.shape.xMin - newH;
+					const dxR = obj.shape.xMax - newH;
+					const yL = dragInfo.savedEndpointYLeft;
+					const yR = dragInfo.savedEndpointYRight;
+					// Use the farther endpoint for numerical stability
+					if (Math.abs(dxL) >= Math.abs(dxR) && dxL * dxL > 1) {
+						obj.shape.a = (yL - newK) / (dxL * dxL);
+					} else if (dxR * dxR > 1) {
+						obj.shape.a = (yR - newK) / (dxR * dxR);
+					}
+					// Naturally flips peak↔valley:
+					// vertex below endpoints → a > 0 (valley)
+					// vertex above endpoints → a < 0 (peak)
+				}
+			}
 			if (anchorId === 'left') {
 				obj.shape.xMin = Math.min(newWorldPos.x, obj.shape.h - 5);
 			}
 			if (anchorId === 'right') {
 				obj.shape.xMax = Math.max(newWorldPos.x, obj.shape.h + 5);
 			}
+			// Regenerate points for hit testing
+			regenerateParabolaPoints(obj);
 			break;
 		case 'sine':
 		case 'cosine': {
@@ -520,4 +545,18 @@ export function findAnchorAtPoint(obj, worldPos, camera) {
 		}
 	}
 	return null;
+}
+
+// ============ Point regeneration helpers ============
+
+function regenerateParabolaPoints(obj) {
+	if (!obj.shape) return;
+	const { h, k, a, xMin, xMax } = obj.shape;
+	const steps = 100;
+	const pts = [];
+	for (let i = 0; i <= steps; i++) {
+		const x = xMin + (i / steps) * (xMax - xMin);
+		pts.push({ x, y: a * (x - h) ** 2 + k });
+	}
+	obj.points = pts;
 }

@@ -109,15 +109,22 @@ function onPointerDown(e) {
 		const strokes = getStrokes();
 		const camera = getCamera();
 
-		// 1. Check if clicking on an anchor of a selected shape
+		// 1. Check if clicking on an anchor of a selected stroke
 		if (selected.length > 0) {
 			for (const idx of selected) {
 				const stroke = strokes[idx];
-				if (!stroke || !stroke.shape) continue;
+				if (!stroke) continue;
 				const anchor = findAnchorAtPoint(stroke, pos, camera);
 				if (anchor) {
 					setIsDraggingAnchor(true);
-					setDraggingAnchorInfo({ strokeIdx: idx, anchorId: anchor.id });
+					const info = { strokeIdx: idx, anchorId: anchor.id };
+					// For parabola vertex drag, save endpoint y-values
+					if (stroke.shape && stroke.shape.type === 'parabola' && anchor.id === 'vertex') {
+						const s = stroke.shape;
+						info.savedEndpointYLeft = s.a * (s.xMin - s.h) ** 2 + s.k;
+						info.savedEndpointYRight = s.a * (s.xMax - s.h) ** 2 + s.k;
+					}
+					setDraggingAnchorInfo(info);
 					setDragStartPos(pos);
 					return;
 				}
@@ -193,7 +200,7 @@ function onPointerMove(e) {
 			const strokes = getStrokes();
 			const stroke = strokes[info.strokeIdx];
 			if (stroke) {
-				onAnchorDrag(stroke, info.anchorId, pos);
+				onAnchorDrag(stroke, info.anchorId, pos, info);
 				redrawCanvas();
 				updatePropertyPanel();
 			}
