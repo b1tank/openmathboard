@@ -1,82 +1,6 @@
 // OpenMathBoard — Shape detection algorithms
-import {
-	SMART_SHAPE_MIN_POINTS, SMART_SHAPE_DEBUG_THROTTLE_MS,
-	getSmartShapeSettings, getSmartShapeDebugEnabled,
-	getLastSmartShapeDebugAt, setLastSmartShapeDebugAt,
-	getLastSmartShapeDebugKey, setLastSmartShapeDebugKey
-} from './state.js';
 
-// ============ Public API ============
-
-export function recognizeAndSnapStroke(stroke) {
-	if (!stroke || !stroke.points || stroke.points.length < SMART_SHAPE_MIN_POINTS) return stroke;
-
-	const rawPoints = simplifyStrokePoints(stroke.points, Math.max(1.5, stroke.width * 0.5));
-	if (rawPoints.length < SMART_SHAPE_MIN_POINTS) return stroke;
-
-	const bounds = getBounds(rawPoints);
-	const diag = Math.max(1, Math.hypot(bounds.w, bounds.h));
-	if (diag < 12) return stroke;
-
-	const settings = getSmartShapeSettings();
-	const params = getSmartShapeParams(settings.sensitivity);
-
-	const candidates = [];
-
-	const lineResult = detectLine(rawPoints, diag, stroke.width, params);
-	if (lineResult) candidates.push({ type: 'line', score: lineResult.score, data: lineResult });
-
-	const circleResult = detectCircle(rawPoints, diag, stroke.width, params);
-	if (circleResult) candidates.push({ type: 'circle', score: circleResult.score, data: circleResult });
-
-	const parabolaResult = detectParabola(rawPoints, diag, stroke.width, params);
-	if (parabolaResult) candidates.push({ type: 'parabola', score: parabolaResult.score, data: parabolaResult });
-
-	if (candidates.length === 0) return stroke;
-	candidates.sort((a, b) => b.score - a.score);
-	const best = candidates[0];
-	let accept = params.acceptScore;
-	if (best.type === 'line') accept = params.acceptLine;
-	if (best.type === 'circle') accept = params.acceptCircle;
-	if (best.type === 'parabola') accept = params.acceptParabola;
-	if (best.score < accept) return stroke;
-
-	if (best.type === 'line') {
-		const r = best.data;
-		return {
-			...stroke,
-			shape: { type: 'line', x1: r.p1.x, y1: r.p1.y, x2: r.p2.x, y2: r.p2.y },
-			points: [r.p1, r.p2]
-		};
-	}
-
-	if (best.type === 'circle') {
-		const r = best.data;
-		const points = generateCirclePoints(r.cx, r.cy, r.r, 120);
-		return {
-			...stroke,
-			shape: { type: 'circle', cx: r.cx, cy: r.cy, r: r.r },
-			points
-		};
-	}
-
-	if (best.type === 'parabola') {
-		const r = best.data;
-		const points = generateParabolaPoints(r, 140);
-		return {
-			...stroke,
-			shape: {
-				type: 'parabola', mode: r.mode, origin: r.origin,
-				a: r.a, b: r.b, c: r.c, tMin: r.tMin, tMax: r.tMax
-			},
-			points
-		};
-	}
-
-	return stroke;
-}
-
-// ============ Sensitivity params ============
+const SMART_SHAPE_MIN_POINTS = 10;
 
 export function getSmartShapeParams(sensitivity) {
 	const s = clamp01((clampInt(sensitivity, 0, 100)) / 100);
@@ -106,8 +30,6 @@ export function getSmartShapeParams(sensitivity) {
 		parabolaClosedMax: lerp(0.10, 0.35)
 	};
 }
-
-// ============ Point utilities ============
 
 export function simplifyStrokePoints(points, minDist) {
 	if (!points || points.length === 0) return [];
@@ -174,8 +96,6 @@ export function pointToPolylineDistance(p, points) {
 	}
 	return best;
 }
-
-// ============ Line detection ============
 
 export function detectLine(points, diag, strokeWidth, params, debug = false) {
 	if (points.length < 2) return null;
@@ -274,8 +194,6 @@ function fitLinePCA(points) {
 	const p2 = { x: meanX + vx * tMax, y: meanY + vy * tMax };
 	return { p1, p2 };
 }
-
-// ============ Circle detection ============
 
 export function detectCircle(points, diag, strokeWidth, params, debug = false) {
 	if (points.length < 6) return null;
@@ -393,8 +311,6 @@ export function detectCircle(points, diag, strokeWidth, params, debug = false) {
 	};
 }
 
-// ============ Parabola detection ============
-
 export function detectParabola(points, diag, strokeWidth, params, debug = false) {
 	if (points.length < 10) return null;
 	const p = params || getSmartShapeParams(50);
@@ -433,8 +349,6 @@ export function detectParabola(points, diag, strokeWidth, params, debug = false)
 	}
 	return { ...bestFit, score, metrics: { rmseNorm: bestFit.rmseNorm, curv, inlierRatio: bestFit.inlierRatio, inlierFrac: p.parabolaInlierFrac, closedness, rmseScore, curvScore, inlierScore } };
 }
-
-// ============ Math helpers ============
 
 function fitQuadraticTrimmed(points, mode, keepFrac) {
 	const frac = Math.max(0.5, Math.min(0.95, keepFrac));
@@ -638,95 +552,4 @@ export function clampInt(value, min, max) {
 	const v = parseInt(value, 10);
 	if (!Number.isFinite(v)) return min;
 	return Math.max(min, Math.min(max, v));
-}
-
-// ============ Debug logging ============
-
-export function downsamplePoints(points, maxPoints) {
-	if (!points || points.length <= maxPoints) return points;
-	const out = [];
-	const n = points.length;
-	for (let i = 0; i < maxPoints; i++) {
-		const idx = Math.floor((i / (maxPoints - 1)) * (n - 1));
-		out.push(points[idx]);
-	}
-	return out;
-}
-
-export function maybeLogSmartShapeProgress(stroke) {
-	const now = Date.now();
-	if (now - getLastSmartShapeDebugAt() < SMART_SHAPE_DEBUG_THROTTLE_MS) return;
-	if (!stroke || !stroke.points || stroke.points.length < SMART_SHAPE_MIN_POINTS) return;
-
-	const rawPoints = simplifyStrokePoints(stroke.points, Math.max(1.5, stroke.width * 0.5));
-	if (rawPoints.length < SMART_SHAPE_MIN_POINTS) return;
-	const pts = downsamplePoints(rawPoints, 120);
-	const bounds = getBounds(pts);
-	const diag = Math.max(1, Math.hypot(bounds.w, bounds.h));
-	if (diag < 12) return;
-
-	const settings = getSmartShapeSettings();
-	const params = getSmartShapeParams(settings.sensitivity);
-	const line = detectLine(pts, diag, stroke.width, params, true);
-	const circle = detectCircle(pts, diag, stroke.width, params, true);
-	const parabola = detectParabola(pts, diag, stroke.width, params, true);
-
-	const summarize = (name, obj) => {
-		if (!obj) return `${name}:n/a`;
-		if (obj.rejected) {
-			return `${name}:reject(${obj.reason || 'rejected'}) s=${(obj.score ?? 0).toFixed(2)}`;
-		}
-		return `${name}:ok s=${(obj.score ?? 0).toFixed(2)}`;
-	};
-
-	const best = [
-		{ t: 'line', o: line },
-		{ t: 'circle', o: circle },
-		{ t: 'parabola', o: parabola }
-	].filter(x => x.o && !x.o.rejected).sort((a, b) => (b.o.score ?? 0) - (a.o.score ?? 0))[0];
-
-	const bestStr = best ? `${best.t} ${(best.o.score ?? 0).toFixed(2)}` : 'none';
-	const key = `${settings.sensitivity}|${bestStr}|${(circle && circle.reason) || ''}|${(parabola && parabola.reason) || ''}`;
-	if (key === getLastSmartShapeDebugKey() && now - getLastSmartShapeDebugAt() < 1000) return;
-	setLastSmartShapeDebugKey(key);
-	setLastSmartShapeDebugAt(now);
-
-	console.groupCollapsed(`[SmartShapes] drawing… sens=${settings.sensitivity} accept=${params.acceptScore.toFixed(2)} best=${bestStr}`);
-	console.log(summarize('line', line));
-	if (line && line.metrics) console.log('line.metrics', line.metrics);
-	console.log(summarize('circle', circle));
-	if (circle) {
-		if (circle.metrics) console.log('circle.metrics', circle.metrics);
-		if (circle.reason && !circle.metrics) console.log('circle.details', circle);
-	}
-	console.log(summarize('parabola', parabola));
-	if (parabola) {
-		if (parabola.metrics) console.log('parabola.metrics', parabola.metrics);
-		if (parabola.reason && !parabola.metrics) console.log('parabola.details', parabola);
-	}
-	console.groupEnd();
-}
-
-export function logSmartShapeFinalDecision(originalStroke, finalStroke) {
-	try {
-		const rawPoints = simplifyStrokePoints(originalStroke.points, Math.max(1.5, originalStroke.width * 0.5));
-		const pts = downsamplePoints(rawPoints, 160);
-		const bounds = getBounds(pts);
-		const diag = Math.max(1, Math.hypot(bounds.w, bounds.h));
-		const settings = getSmartShapeSettings();
-		const params = getSmartShapeParams(settings.sensitivity);
-		const line = detectLine(pts, diag, originalStroke.width, params, true);
-		const circle = detectCircle(pts, diag, originalStroke.width, params, true);
-		const parabola = detectParabola(pts, diag, originalStroke.width, params, true);
-		const snapped = finalStroke && finalStroke.shape ? finalStroke.shape.type : 'none';
-
-		console.group(`[SmartShapes] pointerup sens=${settings.sensitivity} accept=${params.acceptScore.toFixed(2)} snapped=${snapped}`);
-		console.log('line', line);
-		console.log('circle', circle);
-		console.log('parabola', parabola);
-		if (finalStroke && finalStroke.shape) console.log('final.shape', finalStroke.shape);
-		console.groupEnd();
-	} catch (err) {
-		console.warn('[SmartShapes] debug logging failed', err);
-	}
 }
