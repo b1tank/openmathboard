@@ -15,6 +15,7 @@ import { setTool } from './tools.js';
 import { saveToHistory } from './history.js';
 import { initToast } from './toast.js';
 import { initHero } from './hero.js';
+import { setupWheelZoom, setupPinchZoom, setupSpacebarPan } from './camera.js';
 
 // ============ Initialize i18n ============
 initI18n({
@@ -99,6 +100,12 @@ function init() {
 	setupDropZone();
 	setupClipboard();
 	setupKeyboardShortcuts();
+
+	// Camera: zoom/pan
+	const canvasEl = getCanvas();
+	setupWheelZoom(canvasEl, () => redrawCanvas());
+	setupPinchZoom(canvasEl, () => redrawCanvas());
+	setupSpacebarPan(canvasEl, () => redrawCanvas());
 
 	loadSmartShapeSettings();
 	updateSmartShapeUI();

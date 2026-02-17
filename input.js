@@ -30,6 +30,7 @@ import { t } from './lib/i18n.js';
 import { showToast } from './toast.js';
 import { saveImage } from './export.js';
 import { hideHeroSection } from './hero.js';
+import { isSpacebarPanning } from './camera.js';
 
 // ============ Canvas event setup ============
 
@@ -58,6 +59,10 @@ function getPointerPos(e) {
 
 function onPointerDown(e) {
 	e.preventDefault();
+
+	// Don't start drawing when spacebar-panning
+	if (isSpacebarPanning()) return;
+
 	const canvas = getCanvas();
 	canvas.setPointerCapture(e.pointerId);
 
