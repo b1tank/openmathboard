@@ -1,10 +1,11 @@
 // OpenMathBoard — Sine/Cosine shape: y = A·sin(B(x - C)) + D
+// Enhanced anchors for period control, amplitude, stretch/narrow
 
 export function renderSine(ctx, obj) {
 	if (!obj.shape) return;
 	const { A, B, C, D, xMin, xMax } = obj.shape;
 	const isCosine = obj.shape.type === 'cosine';
-	const steps = 200;
+	const steps = Math.max(200, Math.ceil(Math.abs(xMax - xMin) * 2));
 	ctx.beginPath();
 	for (let i = 0; i <= steps; i++) {
 		const t = i / steps;
@@ -31,10 +32,10 @@ export function createDefaultSine(worldX, worldY) {
 		shape: {
 			type: 'sine',
 			A: 50, B, C: worldX, D: worldY,
-			xMin: worldX - period / 2,
-			xMax: worldX + period / 2
+			xMin: worldX - period,
+			xMax: worldX + period
 		},
-		points: generateSinePoints(50, B, worldX, worldY, worldX - period / 2, worldX + period / 2, false)
+		points: genPts(50, B, worldX, worldY, worldX - period, worldX + period, false)
 	};
 }
 
@@ -51,14 +52,14 @@ export function createDefaultCosine(worldX, worldY) {
 		shape: {
 			type: 'cosine',
 			A: 50, B, C: worldX, D: worldY,
-			xMin: worldX - period / 2,
-			xMax: worldX + period / 2
+			xMin: worldX - period,
+			xMax: worldX + period
 		},
-		points: generateSinePoints(50, B, worldX, worldY, worldX - period / 2, worldX + period / 2, true)
+		points: genPts(50, B, worldX, worldY, worldX - period, worldX + period, true)
 	};
 }
 
-function generateSinePoints(A, B, C, D, xMin, xMax, isCosine) {
+function genPts(A, B, C, D, xMin, xMax, isCosine) {
 	const pts = [];
 	const steps = 100;
 	for (let i = 0; i <= steps; i++) {

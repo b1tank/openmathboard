@@ -34,13 +34,21 @@ export function getAnchors(obj) {
 				{ id: 'right', x: obj.shape.xMax, y: obj.shape.a * (obj.shape.xMax - obj.shape.h) ** 2 + obj.shape.k, type: 'curve' },
 			];
 		case 'sine':
-		case 'cosine':
+		case 'cosine': {
+			const s = obj.shape;
+			const midX = (s.xMin + s.xMax) / 2;
+			const period = (2 * Math.PI) / Math.abs(s.B || 0.01);
+			// periodEnd: one period to the right of center, on midline
+			const periodEndX = midX + period;
 			return [
-				{ id: 'left', x: obj.shape.xMin, y: obj.shape.D, type: 'endpoint' },
-				{ id: 'right', x: obj.shape.xMax, y: obj.shape.D, type: 'endpoint' },
-				{ id: 'peak', x: (obj.shape.xMin + obj.shape.xMax) / 2, y: obj.shape.D - obj.shape.A, type: 'curve' },
-				{ id: 'midline', x: (obj.shape.xMin + obj.shape.xMax) / 2, y: obj.shape.D, type: 'scale' },
+				{ id: 'center', x: midX, y: s.D, type: 'center' },          // move whole shape
+				{ id: 'left', x: s.xMin, y: s.D, type: 'endpoint' },        // extend left (more periods)
+				{ id: 'right', x: s.xMax, y: s.D, type: 'endpoint' },       // extend right (more periods)
+				{ id: 'peak', x: midX, y: s.D - s.A, type: 'curve' },       // amplitude (drag up/down)
+				{ id: 'valley', x: midX, y: s.D + s.A, type: 'curve' },     // amplitude (drag up/down, symmetric)
+				{ id: 'period', x: Math.min(periodEndX, s.xMax), y: s.D, type: 'scale' }, // frequency/period control
 			];
+		}
 		case 'arrow':
 			return [
 				{ id: 'p1', x: obj.shape.x1, y: obj.shape.y1, type: 'endpoint' },
@@ -90,12 +98,39 @@ export function onAnchorDrag(obj, anchorId, newWorldPos) {
 			}
 			break;
 		case 'sine':
-		case 'cosine':
-			if (anchorId === 'left') { obj.shape.xMin = newWorldPos.x; }
-			if (anchorId === 'right') { obj.shape.xMax = newWorldPos.x; }
-			if (anchorId === 'peak') { obj.shape.A = obj.shape.D - newWorldPos.y; }
-			if (anchorId === 'midline') { obj.shape.D = newWorldPos.y; }
+		case 'cosine': {
+			const s = obj.shape;
+			const midX = (s.xMin + s.xMax) / 2;
+			const halfSpan = (s.xMax - s.xMin) / 2;
+			if (anchorId === 'center') {
+				// Move entire wave
+				const dx = newWorldPos.x - midX;
+				const dy = newWorldPos.y - s.D;
+				s.C += dx; s.D += dy;
+				s.xMin += dx; s.xMax += dx;
+			}
+			if (anchorId === 'left') {
+				s.xMin = Math.min(newWorldPos.x, s.xMax - 20);
+			}
+			if (anchorId === 'right') {
+				s.xMax = Math.max(newWorldPos.x, s.xMin + 20);
+			}
+			if (anchorId === 'peak') {
+				// Amplitude: distance from midline to peak
+				s.A = Math.max(5, s.D - newWorldPos.y);
+			}
+			if (anchorId === 'valley') {
+				// Amplitude from valley side
+				s.A = Math.max(5, newWorldPos.y - s.D);
+			}
+			if (anchorId === 'period') {
+				// Period control: distance from center to this handle = one period
+				const dist = Math.abs(newWorldPos.x - midX);
+				const newPeriod = Math.max(20, dist);
+				s.B = (2 * Math.PI) / newPeriod;
+			}
 			break;
+		}
 		case 'arrow':
 			if (anchorId === 'p1') { obj.shape.x1 = newWorldPos.x; obj.shape.y1 = newWorldPos.y; }
 			if (anchorId === 'p2') { obj.shape.x2 = newWorldPos.x; obj.shape.y2 = newWorldPos.y; }
