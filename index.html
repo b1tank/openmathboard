@@ -390,6 +390,31 @@
   <!-- Status toast -->
   <div class="toast" id="toast"></div>
 
+  <!-- Property Panel (floating, appears on selection) -->
+  <div class="property-panel" id="propertyPanel">
+    <div class="prop-colors">
+      <button class="prop-color" data-color="#000000" style="background: #000000"></button>
+      <button class="prop-color" data-color="#2563eb" style="background: #2563eb"></button>
+      <button class="prop-color" data-color="#dc2626" style="background: #dc2626"></button>
+      <button class="prop-color" data-color="#16a34a" style="background: #16a34a"></button>
+      <button class="prop-color" data-color="#9333ea" style="background: #9333ea"></button>
+      <button class="prop-color" data-color="#ea580c" style="background: #ea580c"></button>
+    </div>
+    <div class="prop-widths">
+      <button class="prop-width" data-width="2"><span class="stroke-preview" style="height: 2px"></span></button>
+      <button class="prop-width" data-width="4"><span class="stroke-preview" style="height: 4px"></span></button>
+      <button class="prop-width" data-width="8"><span class="stroke-preview" style="height: 8px"></span></button>
+    </div>
+    <div class="prop-dash">
+      <button class="prop-dash-solid" data-dash="false">━━━</button>
+      <button class="prop-dash-dashed" data-dash="true">╌╌╌</button>
+    </div>
+    <button class="prop-delete" id="propDeleteBtn">🗑️</button>
+  </div>
+
+  <!-- Conversion Popup (appears after freehand stroke) -->
+  <div class="conversion-popup" id="conversionPopup"></div>
+
   <script type="module" src="app.js"></script>
 </body>
 </html>

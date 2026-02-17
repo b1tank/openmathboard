@@ -16,6 +16,7 @@ import { saveToHistory } from './history.js';
 import { initToast } from './toast.js';
 import { initHero } from './hero.js';
 import { setupWheelZoom, setupPinchZoom, setupSpacebarPan } from './camera.js';
+import { initPropertyPanel } from './property-panel.js';
 
 // ============ Initialize i18n ============
 initI18n({
@@ -109,6 +110,9 @@ function init() {
 
 	loadSmartShapeSettings();
 	updateSmartShapeUI();
+
+	// Property panel
+	initPropertyPanel();
 
 	// i18n
 	setupLanguagePicker({

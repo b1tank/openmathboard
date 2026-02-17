@@ -31,6 +31,7 @@ import { showToast } from './toast.js';
 import { saveImage } from './export.js';
 import { hideHeroSection } from './hero.js';
 import { isSpacebarPanning } from './camera.js';
+import { updatePropertyPanel } from './property-panel.js';
 
 // ============ Canvas event setup ============
 
@@ -196,6 +197,7 @@ function onPointerUp() {
 			setIsSelecting(false);
 			setSelectionRect(null);
 			updateSelectionCursor();
+			updatePropertyPanel();
 			redrawCanvas();
 			return;
 		}

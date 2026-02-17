@@ -11,6 +11,7 @@ import { redrawCanvas, getStrokeBounds, isPointNearStroke } from './renderer.js'
 import { saveToHistory } from './history.js';
 import { t } from './lib/i18n.js';
 import { showToast } from './toast.js';
+import { updatePropertyPanel, hidePropertyPanel } from './property-panel.js';
 
 export function clearSelection() {
 	setSelectedStrokes([]);
@@ -19,6 +20,7 @@ export function clearSelection() {
 	setIsDraggingSelection(false);
 	setDragStartPos(null);
 	updateSelectionCursor();
+	hidePropertyPanel();
 	redrawCanvas();
 }
 
