@@ -34,6 +34,14 @@ import { updatePropertyPanel } from '../ui/property-panel.js';
 import { showConversionPopup } from '../ui/conversion.js';
 import { findAnchorAtPoint, onAnchorDrag } from '../canvas/anchors.js';
 
+// ============ Touch/stylus detection ============
+// Track whether the device has a stylus (e.g. iPad + Apple Pencil).
+// When a stylus is present, finger input pans/zooms and pen draws.
+// When no stylus is detected (phones), finger input draws.
+let hasPenInput = false;
+// Track the active pointer (prevents multi-touch glitches)
+let activePointerId = null;
+
 // ============ Canvas event setup ============
 
 export function setupCanvasListeners() {
@@ -65,18 +73,34 @@ function onPointerDown(e) {
 	// Don't start drawing when spacebar-panning
 	if (isSpacebarPanning()) return;
 
-	const canvas = getCanvas();
-	canvas.setPointerCapture(e.pointerId);
-
-	// Pencil/finger detection: pen draws, touch pans
+	// Pencil/finger detection: pen draws, touch pans (only when stylus is available)
 	const isPencil = e.pointerType === 'pen';
 	const isFinger = e.pointerType === 'touch';
-	const isMouse = e.pointerType === 'mouse';
 
-	// Finger always pans (handled by pinch zoom in camera.js)
-	if (isFinger && getCurrentTool() !== TOOLS.SELECT) {
+	// Remember if a stylus has ever been used on this device
+	if (isPencil) hasPenInput = true;
+
+	// On devices with a stylus, finger always pans (handled by camera.js).
+	// On devices WITHOUT a stylus (phones), finger is allowed to draw.
+	if (isFinger && hasPenInput && getCurrentTool() !== TOOLS.SELECT) {
 		return; // Let camera.js handle touch pan/zoom
 	}
+
+	// Multi-touch: if a second finger arrives, cancel in-progress drawing
+	// and let pinch-zoom (camera.js) take over.
+	if (isFinger && activePointerId !== null && activePointerId !== e.pointerId) {
+		if (getIsDrawing()) {
+			setIsDrawing(false);
+			setCurrentStroke(null);
+			redrawCanvas();
+		}
+		activePointerId = null;
+		return;
+	}
+
+	const canvas = getCanvas();
+	canvas.setPointerCapture(e.pointerId);
+	activePointerId = e.pointerId;
 
 	const pos = getPointerPos(e);
 
@@ -149,6 +173,9 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
+	// Ignore events from non-active pointers (prevents multi-touch glitches)
+	if (activePointerId !== null && e.pointerId !== activePointerId) return;
+
 	const pos = getPointerPos(e);
 
 	if (getCurrentTool() === TOOLS.SELECT) {
@@ -204,7 +231,11 @@ function onPointerMove(e) {
 	}
 }
 
-function onPointerUp() {
+function onPointerUp(e) {
+	// Ignore events from non-active pointers
+	if (activePointerId !== null && e && e.pointerId !== activePointerId) return;
+	activePointerId = null;
+
 	if (getCurrentTool() === TOOLS.SELECT) {
 		// End anchor drag
 		if (getIsDraggingAnchor()) {
