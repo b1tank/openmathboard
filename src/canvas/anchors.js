@@ -1,13 +1,49 @@
 // OpenMathBoard — Anchor system (rendering, hit testing, drag handling)
 import { getCamera } from '../core/state.js';
 import { worldToScreen } from './camera.js';
+import { getStrokeBounds } from './renderer.js';
 
 const ANCHOR_SIZE = 12;
 const HIT_THRESHOLD = 28; // screen pixels — large for touch targets
+const ROTATION_HANDLE_OFFSET = 40; // pixels above top of bounding box (screen space)
 
 // ============ Get anchors for any shape type ============
 
-export function getAnchors(obj) {
+/**
+ * Returns general bounding-box anchors (stretch N/S/E/W + rotation).
+ * These apply to ALL shapes. Returns world-coordinate anchors.
+ */
+export function getGeneralAnchors(obj, camera) {
+	const bounds = getStrokeBounds(obj);
+	if (!bounds) return [];
+
+	const cx = (bounds.minX + bounds.maxX) / 2;
+	const cy = (bounds.minY + bounds.maxY) / 2;
+	const rotOffset = ROTATION_HANDLE_OFFSET / camera.zoom;
+
+	return [
+		{ id: 'stretch-n', x: cx, y: bounds.minY, type: 'stretch' },
+		{ id: 'stretch-s', x: cx, y: bounds.maxY, type: 'stretch' },
+		{ id: 'stretch-e', x: bounds.maxX, y: cy, type: 'stretch' },
+		{ id: 'stretch-w', x: bounds.minX, y: cy, type: 'stretch' },
+		{ id: 'rotation', x: cx, y: bounds.minY - rotOffset, type: 'rotation' },
+	];
+}
+
+// ============ Get anchors for any shape type ============
+
+export function getAnchors(obj, camera) {
+	if (!obj) return [];
+	const cam = camera || getCamera();
+	const general = getGeneralAnchors(obj, cam);
+	const special = getSpecialAnchors(obj);
+	return [...special, ...general];
+}
+
+/**
+ * Shape-specific anchors (endpoints, centers, curve handles, etc.)
+ */
+export function getSpecialAnchors(obj) {
 	if (!obj || !obj.shape) return [];
 
 	switch (obj.shape.type) {
@@ -91,7 +127,15 @@ export function getAnchors(obj) {
 // ============ Anchor drag handling ============
 
 export function onAnchorDrag(obj, anchorId, newWorldPos) {
-	if (!obj || !obj.shape) return;
+	if (!obj) return;
+
+	// General anchors (stretch / rotation)
+	if (anchorId.startsWith('stretch-') || anchorId === 'rotation') {
+		onGeneralAnchorDrag(obj, anchorId, newWorldPos);
+		return;
+	}
+
+	if (!obj.shape) return;
 
 	switch (obj.shape.type) {
 		case 'line':
@@ -183,13 +227,191 @@ export function onAnchorDrag(obj, anchorId, newWorldPos) {
 	}
 }
 
+// ============ General anchor drag (stretch + rotation) ============
+
+function onGeneralAnchorDrag(obj, anchorId, newWorldPos) {
+	const bounds = getStrokeBounds(obj);
+	if (!bounds) return;
+
+	const cx = (bounds.minX + bounds.maxX) / 2;
+	const cy = (bounds.minY + bounds.maxY) / 2;
+	const w = bounds.maxX - bounds.minX;
+	const h = bounds.maxY - bounds.minY;
+
+	if (anchorId === 'rotation') {
+		// Compute angle from center to pointer
+		const angle = Math.atan2(newWorldPos.y - cy, newWorldPos.x - cx) + Math.PI / 2;
+		// Snap to 15-degree increments if close
+		const snap = Math.PI / 12;
+		const snapped = Math.round(angle / snap) * snap;
+		const finalAngle = Math.abs(angle - snapped) < 0.05 ? snapped : angle;
+		
+		if (obj.shape) {
+			obj.shape.rotation = finalAngle;
+		}
+		return;
+	}
+
+	// Stretch: scale shape geometry from bounding box
+	if (w < 1 || h < 1) return;
+
+	let scaleX = 1, scaleY = 1;
+	let newCx = cx, newCy = cy;
+
+	switch (anchorId) {
+		case 'stretch-n': {
+			const newMinY = Math.min(newWorldPos.y, bounds.maxY - 5);
+			const newH = bounds.maxY - newMinY;
+			scaleY = newH / h;
+			newCy = (newMinY + bounds.maxY) / 2;
+			break;
+		}
+		case 'stretch-s': {
+			const newMaxY = Math.max(newWorldPos.y, bounds.minY + 5);
+			const newH = newMaxY - bounds.minY;
+			scaleY = newH / h;
+			newCy = (bounds.minY + newMaxY) / 2;
+			break;
+		}
+		case 'stretch-e': {
+			const newMaxX = Math.max(newWorldPos.x, bounds.minX + 5);
+			const newW = newMaxX - bounds.minX;
+			scaleX = newW / w;
+			newCx = (bounds.minX + newMaxX) / 2;
+			break;
+		}
+		case 'stretch-w': {
+			const newMinX = Math.min(newWorldPos.x, bounds.maxX - 5);
+			const newW = bounds.maxX - newMinX;
+			scaleX = newW / w;
+			newCx = (newMinX + bounds.maxX) / 2;
+			break;
+		}
+	}
+
+	// Apply scale to shape
+	scaleShape(obj, cx, cy, newCx, newCy, scaleX, scaleY);
+}
+
+/**
+ * Scale a shape's geometry around (oldCx, oldCy), then translate center to (newCx, newCy).
+ */
+function scaleShape(obj, oldCx, oldCy, newCx, newCy, scaleX, scaleY) {
+	function transformPt(x, y) {
+		return {
+			x: (x - oldCx) * scaleX + newCx,
+			y: (y - oldCy) * scaleY + newCy
+		};
+	}
+
+	if (obj.shape) {
+		const s = obj.shape;
+		switch (s.type) {
+			case 'circle': {
+				const c = transformPt(s.cx, s.cy);
+				s.cx = c.x; s.cy = c.y;
+				s.r = s.r * Math.max(scaleX, scaleY);
+				break;
+			}
+			case 'ellipse': {
+				const c = transformPt(s.cx, s.cy);
+				s.cx = c.x; s.cy = c.y;
+				s.rx = s.rx * scaleX; s.ry = s.ry * scaleY;
+				break;
+			}
+			case 'line':
+			case 'arrow': {
+				const p1 = transformPt(s.x1, s.y1);
+				const p2 = transformPt(s.x2, s.y2);
+				s.x1 = p1.x; s.y1 = p1.y;
+				s.x2 = p2.x; s.y2 = p2.y;
+				break;
+			}
+			case 'parabola': {
+				const v = transformPt(s.h, s.k);
+				const lx = transformPt(s.xMin, 0);
+				const rx = transformPt(s.xMax, 0);
+				s.h = v.x; s.k = v.y;
+				s.xMin = lx.x; s.xMax = rx.x;
+				// Adjust 'a' to preserve visual shape under scale
+				if (scaleX !== 0) s.a = s.a * (scaleY / scaleX);
+				break;
+			}
+			case 'sine':
+			case 'cosine': {
+				const c = transformPt((s.xMin + s.xMax) / 2, s.D);
+				const lx = transformPt(s.xMin, 0);
+				const rx = transformPt(s.xMax, 0);
+				s.C = c.x; s.D = c.y;
+				s.xMin = lx.x; s.xMax = rx.x;
+				s.A = s.A * scaleY;
+				if (scaleX !== 1) s.B = s.B / scaleX;
+				break;
+			}
+			case 'axes': {
+				const o = transformPt(s.ox, s.oy);
+				s.ox = o.x; s.oy = o.y;
+				const xPos = s.xPosLen || s.xLen || 120;
+				const xNeg = s.xNegLen || s.xLen || 120;
+				const yPos = s.yPosLen || s.yLen || 120;
+				const yNeg = s.yNegLen || s.yLen || 120;
+				s.xPosLen = xPos * scaleX; s.xNegLen = xNeg * scaleX;
+				s.yPosLen = yPos * scaleY; s.yNegLen = yNeg * scaleY;
+				break;
+			}
+			case 'numberline': {
+				const o = transformPt(s.ox, s.oy);
+				s.ox = o.x; s.oy = o.y;
+				s.leftLen = s.leftLen * scaleX;
+				s.rightLen = s.rightLen * scaleX;
+				break;
+			}
+			case 'axes3d': {
+				const o = transformPt(s.ox, s.oy);
+				s.ox = o.x; s.oy = o.y;
+				s.xLen = s.xLen * scaleX;
+				s.yLen = s.yLen * scaleY;
+				s.zLen = s.zLen * Math.max(scaleX, scaleY);
+				break;
+			}
+		}
+	}
+
+	// Scale all points
+	if (obj.points) {
+		for (const pt of obj.points) {
+			const t = { x: (pt.x - oldCx) * scaleX + newCx, y: (pt.y - oldCy) * scaleY + newCy };
+			pt.x = t.x; pt.y = t.y;
+		}
+	}
+}
+
 // ============ Anchor rendering ============
 
 export function renderAnchors(ctx, obj, camera) {
-	const anchors = getAnchors(obj);
+	const anchors = getAnchors(obj, camera);
 	if (anchors.length === 0) return;
 
-	const invZoom = 1 / camera.zoom;
+	// Draw rotation handle line (from top-center of bounds to rotation anchor)
+	const bounds = getStrokeBounds(obj);
+	if (bounds) {
+		const topCenterX = ((bounds.minX + bounds.maxX) / 2 - camera.x) * camera.zoom;
+		const topCenterY = (bounds.minY - camera.y) * camera.zoom - 6; // 6 = padding
+		const rotAnchor = anchors.find(a => a.id === 'rotation');
+		if (rotAnchor) {
+			const rx = (rotAnchor.x - camera.x) * camera.zoom;
+			const ry = (rotAnchor.y - camera.y) * camera.zoom;
+			ctx.save();
+			ctx.beginPath();
+			ctx.moveTo(topCenterX, topCenterY);
+			ctx.lineTo(rx, ry);
+			ctx.strokeStyle = '#94a3b8';
+			ctx.lineWidth = 1;
+			ctx.setLineDash([]);
+			ctx.stroke();
+			ctx.restore();
+		}
+	}
 
 	for (const anchor of anchors) {
 		const sx = (anchor.x - camera.x) * camera.zoom;
@@ -245,6 +467,38 @@ export function renderAnchors(ctx, obj, camera) {
 				ctx.lineWidth = 2;
 				ctx.stroke();
 				break;
+			case 'stretch': // Small outlined square (green)
+				ctx.fillStyle = 'white';
+				ctx.fillRect(-size / 3, -size / 3, size * 2 / 3, size * 2 / 3);
+				ctx.strokeStyle = '#16a34a';
+				ctx.lineWidth = 1.5;
+				ctx.strokeRect(-size / 3, -size / 3, size * 2 / 3, size * 2 / 3);
+				break;
+			case 'rotation': // Circular rotation icon (orange)
+				ctx.beginPath();
+				ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+				ctx.fillStyle = 'white';
+				ctx.fill();
+				ctx.strokeStyle = '#ea580c';
+				ctx.lineWidth = 2;
+				ctx.stroke();
+				// Rotation arrow icon
+				ctx.beginPath();
+				ctx.arc(0, 0, size / 3, -Math.PI * 0.8, Math.PI * 0.5);
+				ctx.strokeStyle = '#ea580c';
+				ctx.lineWidth = 1.5;
+				ctx.stroke();
+				// Arrowhead on arc
+				const tipAngle = Math.PI * 0.5;
+				const tipX = (size / 3) * Math.cos(tipAngle);
+				const tipY = (size / 3) * Math.sin(tipAngle);
+				ctx.beginPath();
+				ctx.moveTo(tipX, tipY);
+				ctx.lineTo(tipX + 3, tipY - 3);
+				ctx.moveTo(tipX, tipY);
+				ctx.lineTo(tipX - 3, tipY - 2);
+				ctx.stroke();
+				break;
 		}
 
 		ctx.restore();
@@ -254,7 +508,7 @@ export function renderAnchors(ctx, obj, camera) {
 // ============ Anchor hit testing ============
 
 export function findAnchorAtPoint(obj, worldPos, camera) {
-	const anchors = getAnchors(obj);
+	const anchors = getAnchors(obj, camera);
 	for (const anchor of anchors) {
 		const sx = (anchor.x - camera.x) * camera.zoom;
 		const sy = (anchor.y - camera.y) * camera.zoom;

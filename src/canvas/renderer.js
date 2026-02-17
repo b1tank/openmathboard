@@ -95,7 +95,25 @@ export function drawStroke(ctx, stroke, camera) {
 
 	// Use shape registry for typed shapes
 	if (stroke.shape && RENDERERS[stroke.shape.type]) {
-		RENDERERS[stroke.shape.type](ctx, stroke);
+		// Apply rotation if set
+		const rotation = stroke.shape.rotation || 0;
+		if (rotation !== 0) {
+			const bounds = getStrokeBounds(stroke);
+			if (bounds) {
+				const cx = (bounds.minX + bounds.maxX) / 2;
+				const cy = (bounds.minY + bounds.maxY) / 2;
+				ctx.save();
+				ctx.translate(cx, cy);
+				ctx.rotate(rotation);
+				ctx.translate(-cx, -cy);
+				RENDERERS[stroke.shape.type](ctx, stroke);
+				ctx.restore();
+			} else {
+				RENDERERS[stroke.shape.type](ctx, stroke);
+			}
+		} else {
+			RENDERERS[stroke.shape.type](ctx, stroke);
+		}
 		ctx.setLineDash([]);
 		return;
 	}
