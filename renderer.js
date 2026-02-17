@@ -165,6 +165,23 @@ export function getStrokeBounds(stroke) {
 					minX: s.ox - s.xLen, minY: s.oy - s.yLen,
 					maxX: s.ox + s.xLen, maxY: s.oy + s.yLen
 				};
+			case 'parabola': {
+				// Compute actual y range from parametric
+				const yVertex = s.k;
+				const yLeft = s.a * (s.xMin - s.h) ** 2 + s.k;
+				const yRight = s.a * (s.xMax - s.h) ** 2 + s.k;
+				const yAll = [yVertex, yLeft, yRight];
+				return {
+					minX: s.xMin, maxX: s.xMax,
+					minY: Math.min(...yAll), maxY: Math.max(...yAll)
+				};
+			}
+			case 'sine':
+			case 'cosine':
+				return {
+					minX: s.xMin, maxX: s.xMax,
+					minY: s.D - Math.abs(s.A), maxY: s.D + Math.abs(s.A)
+				};
 		}
 	}
 

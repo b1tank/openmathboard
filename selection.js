@@ -74,21 +74,40 @@ export function moveSelectedStrokes(dx, dy) {
 		const stroke = strokes[idx];
 		if (!stroke) continue;
 
+		// Move shape-specific params
 		if (stroke.shape) {
-			if (stroke.shape.type === 'circle') {
-				stroke.shape.cx += dx;
-				stroke.shape.cy += dy;
-			}
-			if (stroke.shape.type === 'line') {
-				stroke.shape.x1 += dx; stroke.shape.y1 += dy;
-				stroke.shape.x2 += dx; stroke.shape.y2 += dy;
-			}
-			if (stroke.shape.type === 'parabola') {
-				stroke.shape.origin += dx;
-				stroke.shape.c += dy;
+			const s = stroke.shape;
+			switch (s.type) {
+				case 'circle':
+					s.cx += dx; s.cy += dy;
+					break;
+				case 'ellipse':
+					s.cx += dx; s.cy += dy;
+					break;
+				case 'line':
+				case 'arrow':
+					s.x1 += dx; s.y1 += dy;
+					s.x2 += dx; s.y2 += dy;
+					break;
+				case 'parabola':
+					s.h += dx; s.k += dy;
+					s.xMin += dx; s.xMax += dx;
+					// Legacy fields
+					if (s.origin !== undefined) s.origin += dx;
+					if (s.c !== undefined) s.c += dy;
+					break;
+				case 'sine':
+				case 'cosine':
+					s.C += dx; s.D += dy;
+					s.xMin += dx; s.xMax += dx;
+					break;
+				case 'axes':
+					s.ox += dx; s.oy += dy;
+					break;
 			}
 		}
 
+		// Move all points
 		if (stroke.points) {
 			for (const pt of stroke.points) {
 				pt.x += dx;
@@ -133,17 +152,20 @@ export function pasteStrokes() {
 		const copy = JSON.parse(JSON.stringify(stroke));
 
 		if (copy.shape) {
-			if (copy.shape.type === 'circle') {
-				copy.shape.cx += offset;
-				copy.shape.cy += offset;
-			}
-			if (copy.shape.type === 'line') {
-				copy.shape.x1 += offset; copy.shape.y1 += offset;
-				copy.shape.x2 += offset; copy.shape.y2 += offset;
-			}
-			if (copy.shape.type === 'parabola') {
-				copy.shape.origin += offset;
-				copy.shape.c += offset;
+			const s = copy.shape;
+			switch (s.type) {
+				case 'circle': s.cx += offset; s.cy += offset; break;
+				case 'ellipse': s.cx += offset; s.cy += offset; break;
+				case 'line': case 'arrow':
+					s.x1 += offset; s.y1 += offset; s.x2 += offset; s.y2 += offset; break;
+				case 'parabola':
+					s.h += offset; s.k += offset; s.xMin += offset; s.xMax += offset;
+					if (s.origin !== undefined) s.origin += offset;
+					if (s.c !== undefined) s.c += offset;
+					break;
+				case 'sine': case 'cosine':
+					s.C += offset; s.D += offset; s.xMin += offset; s.xMax += offset; break;
+				case 'axes': s.ox += offset; s.oy += offset; break;
 			}
 		}
 
