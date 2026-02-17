@@ -66,6 +66,16 @@ function onPointerDown(e) {
 	const canvas = getCanvas();
 	canvas.setPointerCapture(e.pointerId);
 
+	// Pencil/finger detection: pen draws, touch pans
+	const isPencil = e.pointerType === 'pen';
+	const isFinger = e.pointerType === 'touch';
+	const isMouse = e.pointerType === 'mouse';
+
+	// Finger always pans (handled by pinch zoom in camera.js)
+	if (isFinger && getCurrentTool() !== TOOLS.SELECT) {
+		return; // Let camera.js handle touch pan/zoom
+	}
+
 	const pos = getPointerPos(e);
 
 	if (getCurrentTool() === TOOLS.SELECT) {

@@ -1,9 +1,9 @@
 // OpenMathBoard — Toolbar setup, dropdowns, mobile menu
 import {
 	SMART_SHAPE_STORAGE_KEY,
-	getSmartShapeSettings, getDomRefs
+	getSmartShapeSettings, getDomRefs, getCurrentDash
 } from './state.js';
-import { setTool, setColor, setStrokeWidth } from './tools.js';
+import { setTool, setColor, setStrokeWidth, setDash } from './tools.js';
 import { TOOLS } from './state.js';
 import { undo, redo } from './history.js';
 import { copyToClipboard, saveImage } from './export.js';
@@ -54,6 +54,14 @@ export function setupToolbarListeners() {
 			refs.strokeDropdown.classList.remove('show');
 		});
 	});
+
+	// Dash toggle
+	const dashBtn = document.getElementById('dashBtn');
+	if (dashBtn) {
+		dashBtn.addEventListener('click', () => {
+			setDash(!getCurrentDash());
+		});
+	}
 
 	// Close dropdowns
 	document.addEventListener('click', (e) => {
