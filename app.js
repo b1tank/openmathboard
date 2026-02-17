@@ -16,6 +16,8 @@ import { initToast } from './toast.js';
 import { initHero } from './hero.js';
 import { setupWheelZoom, setupPinchZoom, setupSpacebarPan } from './camera.js';
 import { initPropertyPanel } from './property-panel.js';
+import { initConversionPopup } from './conversion.js';
+import { initShapePalette } from './palette.js';
 
 // ============ Initialize i18n ============
 initI18n({
@@ -90,6 +92,10 @@ function init() {
 
 	// Property panel
 	initPropertyPanel();
+
+	// Conversion popup + shape palette
+	initConversionPopup();
+	initShapePalette();
 
 	// i18n
 	setupLanguagePicker({

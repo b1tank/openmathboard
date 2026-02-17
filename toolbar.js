@@ -8,6 +8,7 @@ import { handleFileSelect } from './images.js';
 import { t } from './lib/i18n.js';
 import { showToast } from './toast.js';
 import { setLanguage, applyTranslations } from './lib/i18n.js';
+import { toggleShapePalette } from './palette.js';
 
 export function setupToolbarListeners() {
 	const refs = getDomRefs();
@@ -56,6 +57,15 @@ export function setupToolbarListeners() {
 	if (dashBtn) {
 		dashBtn.addEventListener('click', () => {
 			setDash(!getCurrentDash());
+		});
+	}
+
+	// Shape Palette toggle
+	const shapePaletteBtn = document.getElementById('shapePaletteBtn');
+	if (shapePaletteBtn) {
+		shapePaletteBtn.addEventListener('click', () => {
+			toggleShapePalette();
+			shapePaletteBtn.classList.toggle('active');
 		});
 	}
 

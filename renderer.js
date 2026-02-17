@@ -1,10 +1,30 @@
-// OpenMathBoard — Canvas renderer
+// OpenMathBoard — Canvas renderer with shape registry
 import {
 	getStrokes, getSelectedStrokes, getIsSelecting, getSelectionRect,
-	getCurrentStroke, getCanvasRect, getCanvas, getCtx, getCamera
+	getCanvasRect, getCtx, getCamera
 } from './state.js';
 import { renderFreehand } from './shapes/freehand.js';
+import { renderLine } from './shapes/line.js';
+import { renderCircle } from './shapes/circle.js';
+import { renderEllipse } from './shapes/ellipse.js';
+import { renderParabola } from './shapes/parabola.js';
+import { renderSine } from './shapes/sine.js';
+import { renderArrow } from './shapes/arrow.js';
+import { renderAxes } from './shapes/axes.js';
+import { renderAnchors } from './anchors.js';
 import { pointToSegmentDistance, pointToPolylineDistance, getBounds } from './detection.js';
+
+// Shape renderer registry
+const RENDERERS = {
+	line: renderLine,
+	circle: renderCircle,
+	ellipse: renderEllipse,
+	parabola: renderParabola,
+	sine: renderSine,
+	cosine: renderSine, // Same renderer handles both
+	arrow: renderArrow,
+	axes: renderAxes,
+};
 
 // ============ Main render ============
 
@@ -16,23 +36,30 @@ export function redrawCanvas() {
 	ctx.clearRect(0, 0, rect.width, rect.height);
 
 	const camera = getCamera();
+	const strokes = getStrokes();
 
 	ctx.save();
 	ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
 	ctx.scale(camera.zoom, camera.zoom);
 
 	// Draw all strokes
-	const strokes = getStrokes();
 	for (let i = 0; i < strokes.length; i++) {
 		drawStroke(ctx, strokes[i], camera);
 	}
 
 	ctx.restore();
 
-	// Draw selection highlights (in screen space)
+	// Draw selection highlights + anchors (in screen space)
 	const selected = getSelectedStrokes();
 	if (selected.length > 0) {
 		drawSelectionHighlights(ctx, strokes, selected, camera);
+		// Draw anchors for selected shapes
+		for (const idx of selected) {
+			const stroke = strokes[idx];
+			if (stroke && stroke.shape) {
+				renderAnchors(ctx, stroke, camera);
+			}
+		}
 	}
 
 	// Draw selection rectangle while dragging
@@ -44,50 +71,25 @@ export function redrawCanvas() {
 // ============ Stroke drawing ============
 
 export function drawStroke(ctx, stroke, camera) {
-	if (!stroke || !stroke.points || stroke.points.length < 2) return;
+	if (!stroke) return;
 
-	ctx.strokeStyle = stroke.color;
-	ctx.lineWidth = stroke.width;
+	ctx.strokeStyle = stroke.color || '#000000';
+	ctx.lineWidth = stroke.width || 4;
 	ctx.lineCap = 'round';
 	ctx.lineJoin = 'round';
+	ctx.setLineDash(stroke.dash ? [8, 6] : []);
 
-	if (stroke.dash) {
-		ctx.setLineDash([8, 6]);
-	} else {
-		ctx.setLineDash([]);
-	}
-
-	if (stroke.shape && stroke.shape.type === 'line') {
-		ctx.beginPath();
-		ctx.moveTo(stroke.shape.x1, stroke.shape.y1);
-		ctx.lineTo(stroke.shape.x2, stroke.shape.y2);
-		ctx.stroke();
+	// Use shape registry for typed shapes
+	if (stroke.shape && RENDERERS[stroke.shape.type]) {
+		RENDERERS[stroke.shape.type](ctx, stroke);
 		ctx.setLineDash([]);
 		return;
 	}
 
-	if (stroke.shape && stroke.shape.type === 'circle') {
-		ctx.beginPath();
-		ctx.arc(stroke.shape.cx, stroke.shape.cy, stroke.shape.r, 0, Math.PI * 2);
-		ctx.stroke();
-		ctx.setLineDash([]);
-		return;
+	// Freehand fallback
+	if (stroke.points && stroke.points.length >= 2) {
+		renderFreehand(ctx, stroke);
 	}
-
-	if (stroke.shape && stroke.shape.type === 'parabola') {
-		ctx.beginPath();
-		const points = stroke.points;
-		ctx.moveTo(points[0].x, points[0].y);
-		for (let i = 1; i < points.length; i++) {
-			ctx.lineTo(points[i].x, points[i].y);
-		}
-		ctx.stroke();
-		ctx.setLineDash([]);
-		return;
-	}
-
-	// Freehand
-	renderFreehand(ctx, stroke);
 }
 
 // ============ Selection rendering ============
@@ -116,7 +118,6 @@ function drawSelectionHighlights(ctx, strokes, selectedStrokes, camera) {
 		const bounds = getStrokeBounds(stroke);
 		if (!bounds) continue;
 
-		// Convert bounds to screen coords
 		const sx = (bounds.minX - camera.x) * camera.zoom;
 		const sy = (bounds.minY - camera.y) * camera.zoom;
 		const sw = (bounds.maxX - bounds.minX) * camera.zoom;
@@ -138,21 +139,23 @@ export function getStrokeBounds(stroke) {
 	if (!stroke) return null;
 
 	if (stroke.shape) {
-		if (stroke.shape.type === 'circle') {
-			return {
-				minX: stroke.shape.cx - stroke.shape.r,
-				minY: stroke.shape.cy - stroke.shape.r,
-				maxX: stroke.shape.cx + stroke.shape.r,
-				maxY: stroke.shape.cy + stroke.shape.r
-			};
-		}
-		if (stroke.shape.type === 'line') {
-			return {
-				minX: Math.min(stroke.shape.x1, stroke.shape.x2),
-				minY: Math.min(stroke.shape.y1, stroke.shape.y2),
-				maxX: Math.max(stroke.shape.x1, stroke.shape.x2),
-				maxY: Math.max(stroke.shape.y1, stroke.shape.y2)
-			};
+		const s = stroke.shape;
+		switch (s.type) {
+			case 'circle':
+				return { minX: s.cx - s.r, minY: s.cy - s.r, maxX: s.cx + s.r, maxY: s.cy + s.r };
+			case 'ellipse':
+				return { minX: s.cx - s.rx, minY: s.cy - s.ry, maxX: s.cx + s.rx, maxY: s.cy + s.ry };
+			case 'line':
+			case 'arrow':
+				return {
+					minX: Math.min(s.x1, s.x2), minY: Math.min(s.y1, s.y2),
+					maxX: Math.max(s.x1, s.x2), maxY: Math.max(s.y1, s.y2)
+				};
+			case 'axes':
+				return {
+					minX: s.ox - s.xLen, minY: s.oy - s.yLen,
+					maxX: s.ox + s.xLen, maxY: s.oy + s.yLen
+				};
 		}
 	}
 
@@ -165,16 +168,28 @@ export function getStrokeBounds(stroke) {
 export function isPointNearStroke(pos, stroke, threshold = 15) {
 	if (!stroke) return false;
 
-	if (stroke.shape && stroke.shape.type === 'circle') {
-		const dist = Math.hypot(pos.x - stroke.shape.cx, pos.y - stroke.shape.cy);
-		return Math.abs(dist - stroke.shape.r) < threshold + stroke.width / 2;
-	}
-
-	if (stroke.shape && stroke.shape.type === 'line') {
-		return pointToSegmentDistance(pos,
-			{ x: stroke.shape.x1, y: stroke.shape.y1 },
-			{ x: stroke.shape.x2, y: stroke.shape.y2 }
-		) < threshold + stroke.width / 2;
+	if (stroke.shape) {
+		const s = stroke.shape;
+		const half = threshold + stroke.width / 2;
+		switch (s.type) {
+			case 'circle': {
+				const dist = Math.hypot(pos.x - s.cx, pos.y - s.cy);
+				return Math.abs(dist - s.r) < half;
+			}
+			case 'line':
+			case 'arrow':
+				return pointToSegmentDistance(pos, { x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }) < half;
+			case 'ellipse': {
+				const dx = pos.x - s.cx, dy = pos.y - s.cy;
+				const norm = Math.sqrt((dx * dx) / (s.rx * s.rx) + (dy * dy) / (s.ry * s.ry));
+				return Math.abs(norm - 1) * Math.min(s.rx, s.ry) < half;
+			}
+			case 'axes': {
+				if (pos.y >= s.oy - half && pos.y <= s.oy + half && pos.x >= s.ox - s.xLen - half && pos.x <= s.ox + s.xLen + half) return true;
+				if (pos.x >= s.ox - half && pos.x <= s.ox + half && pos.y >= s.oy - s.yLen - half && pos.y <= s.oy + s.yLen + half) return true;
+				return false;
+			}
+		}
 	}
 
 	if (!stroke.points || stroke.points.length < 2) return false;

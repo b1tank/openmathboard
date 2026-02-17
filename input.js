@@ -29,6 +29,7 @@ import { saveImage } from './export.js';
 import { hideHeroSection } from './hero.js';
 import { isSpacebarPanning } from './camera.js';
 import { updatePropertyPanel } from './property-panel.js';
+import { showConversionPopup } from './conversion.js';
 
 // ============ Canvas event setup ============
 
@@ -203,6 +204,13 @@ function onPointerUp() {
 	if (getCurrentTool() === TOOLS.PEN && currentStroke && currentStroke.points.length > 1) {
 		getStrokes().push(currentStroke);
 		saveToHistory();
+
+		// Show conversion popup if shapes detected
+		const lastPt = currentStroke.points[currentStroke.points.length - 1];
+		const camera = getCamera();
+		const screenX = (lastPt.x - camera.x) * camera.zoom;
+		const screenY = (lastPt.y - camera.y) * camera.zoom + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-height')) || 56);
+		showConversionPopup(currentStroke, screenX, screenY);
 	}
 
 	setCurrentStroke(null);
