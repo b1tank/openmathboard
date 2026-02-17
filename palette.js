@@ -10,6 +10,7 @@ import { createDefaultArrow } from './shapes/arrow.js';
 import { createDefaultAxes } from './shapes/axes.js';
 import { redrawCanvas } from './renderer.js';
 import { saveToHistory } from './history.js';
+import { hideHeroSection } from './hero.js';
 import { t } from './lib/i18n.js';
 
 let paletteEl = null;
@@ -77,6 +78,8 @@ function buildPalette() {
 function placeShape(shapeType) {
 	const constructor = SHAPE_CONSTRUCTORS[shapeType];
 	if (!constructor) return;
+
+	hideHeroSection();
 
 	// Place at center of current viewport
 	const rect = getCanvasRect();

@@ -12,3 +12,4 @@ infra/*.json
 *.swo
 app.js.bak
 node_modules/
+.playwright-mcp/
