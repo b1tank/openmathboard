@@ -46,9 +46,24 @@ export function getGeneralAnchors(obj, camera) {
 export function getAnchors(obj, camera) {
 	if (!obj) return [];
 	const cam = camera || getCamera();
-	const general = getGeneralAnchors(obj, cam);
 	const special = getSpecialAnchors(obj);
-	return [...special, ...general];
+	const general = getGeneralAnchors(obj, cam);
+
+	// Filter out general anchors that overlap with special anchors.
+	// This prevents visual clutter and ambiguous hit targets (e.g.
+	// ellipse rx overlaps stretch-e, sine peak overlaps stretch-n).
+	const OVERLAP_THRESHOLD = 20; // world units — anchors closer than this are considered overlapping
+	const filtered = general.filter(ga => {
+		// Rotation anchor is never filtered out
+		if (ga.id === 'rotation') return true;
+		return !special.some(sa => {
+			const dx = ga.x - sa.x;
+			const dy = ga.y - sa.y;
+			return (dx * dx + dy * dy) < OVERLAP_THRESHOLD * OVERLAP_THRESHOLD;
+		});
+	});
+
+	return [...special, ...filtered];
 }
 
 /**
