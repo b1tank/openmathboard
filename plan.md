@@ -4,12 +4,122 @@ Reference: [spec.md](spec.md) for product requirements.
 
 ---
 
+## Code Architecture Principles
+
+### Hard rules
+- **No file exceeds 500 lines** (including comments). If a module grows past 400 lines, split it.
+- **ES modules** (`import`/`export`) — no global variables, no implicit coupling.
+- **Single responsibility** — each module owns one concern (camera, input, rendering, etc.).
+- **Explicit dependencies** — every module declares its imports at the top. No reaching into other modules' internals.
+- **State lives in `state.js`** — one source of truth. Modules read/write state through exported functions, not by mutating globals.
+
+### Module dependency direction
+```
+app.js (entry point — wiring only, <100 lines)
+  ├── state.js           — canvas objects, selection, camera, tool state
+  ├── camera.js          — zoom, pan, world↔screen transforms
+  ├── input.js           — pointer/touch/keyboard events, pencil vs finger
+  ├── renderer.js        — canvas redraw loop, delegates to shape renderers
+  ├── tools.js           — pen, eraser, select tool logic
+  ├── selection.js       — selection rect, move, copy/paste, property panel
+  ├── history.js         — command-based undo/redo
+  ├── anchors.js         — anchor rendering, hit testing, drag handling
+  ├── shapes/
+  │   ├── freehand.js    — freehand stroke rendering + hit testing
+  │   ├── line.js        — line: render, anchors, anchor-drag
+  │   ├── circle.js      — circle: render, anchors, anchor-drag
+  │   ├── ellipse.js     — ellipse: render, anchors, anchor-drag
+  │   ├── parabola.js    — parabola: render, anchors, anchor-drag
+  │   ├── sine.js        — sine/cosine: render, anchors, anchor-drag
+  │   ├── arrow.js       — arrow: render, anchors, anchor-drag
+  │   └── axes.js        — coordinate axes: render, anchors, anchor-drag
+  ├── detection.js       — shape detection (line, circle, parabola from freehand)
+  ├── conversion.js      — "draw then choose" popup logic
+  ├── palette.js         — shape palette UI (toolbar drawer)
+  ├── toolbar.js         — toolbar buttons, dropdowns, mobile menu
+  ├── export.js          — copy to clipboard, save image, canvas→blob
+  ├── images.js          — image import, drag/drop, paste
+  ├── grid.js            — grid overlay, coordinate axes overlay
+  ├── i18n-strings.js    — all translation strings (en/zh)
+  └── lib/i18n.js        — i18n engine (shared utility)
+```
+
+### Estimated module sizes
+
+| Module | Lines | Responsibility |
+|--------|-------|---------------|
+| `app.js` | ~80 | Entry point: init, wire modules, setup DOM |
+| `state.js` | ~120 | Object store, selection state, camera state, tool state |
+| `camera.js` | ~150 | Zoom/pan logic, worldToScreen/screenToWorld, pinch handling |
+| `input.js` | ~200 | Pointer events, pencil/finger/mouse routing, spacebar pan |
+| `renderer.js` | ~200 | Render loop, clear/draw cycle, delegates to shape renderers |
+| `tools.js` | ~150 | Pen/eraser/select tool state machine |
+| `selection.js` | ~250 | Selection rect, move, copy/paste, property panel show/hide |
+| `history.js` | ~120 | Command-based undo/redo |
+| `anchors.js` | ~250 | Anchor rendering, hit testing, drag dispatch |
+| `shapes/freehand.js` | ~100 | Freehand rendering + point-near-stroke hit test |
+| `shapes/line.js` | ~80 | Line render + anchors + anchor drag |
+| `shapes/circle.js` | ~80 | Circle render + anchors + anchor drag |
+| `shapes/ellipse.js` | ~90 | Ellipse render + anchors + anchor drag |
+| `shapes/parabola.js` | ~120 | Parabola parametric render + anchors |
+| `shapes/sine.js` | ~130 | Sine/cosine parametric render + anchors |
+| `shapes/arrow.js` | ~80 | Arrow render + arrowhead + anchors |
+| `shapes/axes.js` | ~100 | Coordinate axes render + tick marks + anchors |
+| `detection.js` | ~400 | Shape detection algorithms (line, circle, parabola) |
+| `conversion.js` | ~120 | Popup UI, candidate display, convert action |
+| `palette.js` | ~150 | Shape palette drawer UI, default shape constructors |
+| `toolbar.js` | ~300 | All toolbar buttons, dropdowns, mobile hamburger |
+| `export.js` | ~150 | Clipboard copy, file save, canvas→blob with camera |
+| `images.js` | ~200 | Image import, drag/drop, paste, DOM image management |
+| `grid.js` | ~100 | Grid overlay + coordinate axes background |
+| `i18n-strings.js` | ~250 | Translation dictionaries (en + zh) |
+| `style.css` | ~450 | Split if exceeds 500: `style.css` + `shapes.css` |
+| **Total** | **~3870** | |
+
+### Shape module pattern
+
+Every shape module exports the same interface:
+
+```js
+// shapes/circle.js — example
+export function renderCircle(ctx, obj) { ... }
+export function getCircleAnchors(obj) { ... }
+export function onCircleAnchorDrag(obj, anchorId, pos) { ... }
+export function isPointNearCircle(pos, obj, threshold) { ... }
+export function createDefaultCircle(worldX, worldY) { ... }
+```
+
+`renderer.js` and `anchors.js` use a shape registry to dispatch:
+
+```js
+// renderer.js
+import { renderFreehand } from './shapes/freehand.js';
+import { renderLine } from './shapes/line.js';
+import { renderCircle } from './shapes/circle.js';
+// ...
+
+const RENDERERS = {
+  freehand: renderFreehand,
+  line: renderLine,
+  circle: renderCircle,
+  // ...
+};
+
+export function renderObject(ctx, obj) {
+  RENDERERS[obj.type]?.(ctx, obj);
+}
+```
+
+This means adding a new shape type = create one file + register in the lookup tables. No touching core logic.
+
+---
+
 ## Current Architecture (v1)
 
 ### File structure
 ```
-app.js      — 2714 lines, single file, all logic
-style.css   — 872 lines
+app.js      — 2714 lines, MONOLITH (all logic in one file — must be split)
+style.css   — 872 lines (over 500 limit — must be split)
 index.html  — 385 lines
 lib/i18n.js — shared i18n utility
 ```
@@ -41,16 +151,27 @@ selectedStrokes = [];        // indices into strokes[]
 - No zoom/pan — canvas is 1:1 with viewport
 
 ### Key problems to solve
-1. **No infinite canvas** — fixed canvas size, no zoom/pan
-2. **No anchor system** — shapes are rendered as point arrays, not parametric objects
-3. **Auto-convert is threshold-based** — frustrating sensitivity tuning
-4. **No dashed strokes** — `ctx.setLineDash()` never called
-5. **No property editing** — can't change existing stroke color/width
-6. **History is full snapshots** — memory-heavy with many strokes
+1. **Monolith** — 2714-line single file, impossible to maintain. Must split into <500-line modules.
+2. **No infinite canvas** — fixed canvas size, no zoom/pan
+3. **No anchor system** — shapes are rendered as point arrays, not parametric objects
+4. **Auto-convert is threshold-based** — frustrating sensitivity tuning
+5. **No dashed strokes** — `ctx.setLineDash()` never called
+6. **No property editing** — can't change existing stroke color/width
+7. **History is full snapshots** — memory-heavy with many strokes
+8. **Global state soup** — dozens of `let` globals at module top, no encapsulation
 
 ---
 
 ## Target Architecture (v2)
+
+### File structure (v2)
+See "Module dependency direction" diagram above. Key change: **2714-line monolith → ~20 focused modules, each <500 lines.**
+
+### CSS split
+```
+style.css       — ~300 lines (layout, toolbar, canvas container, responsive)
+shapes.css      — ~200 lines (shape palette, property panel, conversion popup, anchors)
+```
 
 ### Data model (v2)
 
@@ -441,19 +562,42 @@ This is much more memory-efficient than copying the entire strokes array.
 
 ## Migration Strategy
 
-### What to keep from v1
-- i18n system and translations (expand with new strings)
-- Color palette, stroke width presets, keyboard shortcuts
-- Image import/export (drag & drop, clipboard, save)
-- Overall toolbar layout and mobile hamburger menu
-- Shape detection algorithms (`detectLine`, `detectCircle`, `detectParabola`)
+### Phase 0 prerequisite: Modular decomposition
+Before any feature work, split the v1 monolith into modules. This is a **pure refactor** — no behavior changes, no new features. Tests: the app works identically before and after.
 
-### What to rewrite
-- **Canvas rendering** — add camera transform layer
-- **Data model** — stroke objects → typed CanvasObject with params
-- **Input handling** — add pencil/finger separation, pan/zoom
-- **Selection** — anchor-aware hit testing
-- **History** — snapshot → command-based
+**Step-by-step decomposition of v1 `app.js`:**
+
+| Extract to | What moves | Approx lines |
+|-----------|-----------|-------------|
+| `i18n-strings.js` | `TRANSLATIONS` object (en + zh) | ~200 |
+| `state.js` | All `let` globals (tool, color, strokes, history, selection, canvas refs) | ~80 |
+| `toolbar.js` | `setupToolbarListeners()`, `setupMobileToolbar()`, color/stroke dropdown logic | ~300 |
+| `tools.js` | `setTool()`, `setColor()`, `setStrokeWidth()`, tool state machine | ~100 |
+| `history.js` | `saveToHistory()`, `undo()`, `redo()`, `restoreFromHistory()`, `updateHistoryButtons()` | ~80 |
+| `selection.js` | `findStrokeAtPoint()`, `findStrokesInRect()`, `moveSelectedStrokes()`, `clearSelection()`, `copySelectedStrokes()`, `pasteStrokes()`, selection rendering | ~200 |
+| `detection.js` | All `detect*()`, `fit*()`, `circleFrom3()`, math helpers, `recognizeAndSnapStroke()` | ~400 |
+| `shapes/freehand.js` | `drawStroke()` for freehand type | ~80 |
+| `renderer.js` | `redrawCanvas()`, `drawSelectionRect()`, `drawSelectionHighlights()` | ~120 |
+| `input.js` | `setupCanvasListeners()`, `onPointerDown/Move/Up()`, `getPointerPos()`, `eraseAtPoint()` | ~200 |
+| `export.js` | `copyToClipboard()`, `saveImage()`, `getCanvasBlob()` | ~150 |
+| `images.js` | `setupDropZone()`, `loadImageFile()`, `addImageToCanvas()`, `setupImageDrag()`, `setupClipboard()` | ~200 |
+| `app.js` | `init()`, `setupCanvas()`, `resizeCanvas()`, keyboard shortcuts, hero section — entry point only | ~80 |
+
+After decomposition: **no file >500 lines**, behavior unchanged. All modules use `import`/`export`.
+
+### What to keep from v1
+- i18n system and translations (moved to `i18n-strings.js`)
+- Color palette, stroke width presets, keyboard shortcuts
+- Image import/export (moved to `images.js`, `export.js`)
+- Overall toolbar layout and mobile hamburger menu (moved to `toolbar.js`)
+- Shape detection algorithms (moved to `detection.js`)
+
+### What to rewrite (in later phases, after modular decomposition)
+- **Canvas rendering** — add camera transform layer (`camera.js`, `renderer.js`)
+- **Data model** — stroke objects → typed CanvasObject with params (`state.js`)
+- **Input handling** — add pencil/finger separation, pan/zoom (`input.js`, `camera.js`)
+- **Selection** — anchor-aware hit testing (`selection.js`, `anchors.js`)
+- **History** — snapshot → command-based (`history.js`)
 
 ### What to remove
 - Sensitivity slider UI and all related code
@@ -468,6 +612,31 @@ This is much more memory-efficient than copying the entire strokes array.
 - Shape palette (toolbar drawer)
 - Dashed stroke rendering
 - Predefined shape constructors (sine, cosine, axes, arrow)
+
+---
+
+## Phase 0 — Modular Decomposition (pure refactor)
+
+**Goal:** Split 2714-line `app.js` into ~12 modules, each <500 lines. Zero behavior change. Split `style.css` (872 lines) into `style.css` + `shapes.css`.
+
+### Tasks
+- [ ] **0.1 Extract `i18n-strings.js`** — move TRANSLATIONS object out of app.js
+- [ ] **0.2 Extract `state.js`** — centralize all global state with getter/setter exports
+- [ ] **0.3 Extract `history.js`** — undo/redo logic
+- [ ] **0.4 Extract `tools.js`** — setTool, setColor, setStrokeWidth
+- [ ] **0.5 Extract `detection.js`** — all shape detection + math helpers
+- [ ] **0.6 Extract `shapes/freehand.js`** — freehand rendering
+- [ ] **0.7 Extract `renderer.js`** — redrawCanvas, selection drawing
+- [ ] **0.8 Extract `selection.js`** — find/move/copy/paste strokes, selection rect
+- [ ] **0.9 Extract `input.js`** — pointer events, eraser
+- [ ] **0.10 Extract `toolbar.js`** — all toolbar setup, dropdowns, mobile menu
+- [ ] **0.11 Extract `export.js`** — clipboard, save image
+- [ ] **0.12 Extract `images.js`** — drop zone, image import, drag
+- [ ] **0.13 Slim `app.js`** — entry point only (~80 lines): init, wire modules
+- [ ] **0.14 Split `style.css`** — base layout+toolbar in `style.css` (~300), shape/popup/anchor styles in `shapes.css` (~200)
+- [ ] **0.15 Verify** — app works identically before and after (manual smoke test)
+
+### Estimated: ~0 new lines (pure move/refactor), 2-3 days
 
 ---
 
@@ -551,10 +720,11 @@ This is much more memory-efficient than copying the entire strokes array.
 
 | Phase | New/Changed Lines | Duration |
 |-------|-------------------|----------|
-| Phase 1 — Canvas + Core | ~1000 | ~1 week |
-| Phase 2 — Shapes + Anchors | ~600 | ~1 week |
-| Phase 3 — Math Curves | ~500 | ~1 week |
-| Phase 4 — Polish | ~400 | ~1 week |
-| **Total** | **~2500** | **~4 weeks** |
+| Phase 0 — Modular Decomposition | ~0 new (pure refactor) | ~3 days |
+| Phase 1 — Canvas + Core | ~1000 across modules | ~1 week |
+| Phase 2 — Shapes + Anchors | ~600 across modules | ~1 week |
+| Phase 3 — Math Curves | ~500 (mostly new shape modules) | ~1 week |
+| Phase 4 — Polish | ~400 across modules | ~1 week |
+| **Total** | **~2500 new** | **~5 weeks** |
 
-Current `app.js` is 2714 lines. After v2, expect ~4000-4500 lines (single file, per yummyjars convention).
+v1: 1 file × 2714 lines. v2: ~20 modules, each <500 lines, ~3870 total lines.

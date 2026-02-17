@@ -11,6 +11,7 @@
 3. **Math objects, not pixels** — A parabola is {vertex, a, direction}, not Bézier curves
 4. **Freehand is always available** — Smart shapes enhance but never replace raw drawing
 5. **Teacher speed** — Every interaction must work at live-teaching pace (< 200ms response)
+6. **Modular and maintainable** — No source file exceeds 500 lines. Each module has a single responsibility. Pure ES modules with explicit imports — no global state soup
 
 ---
 
