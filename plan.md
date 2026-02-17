@@ -42,6 +42,17 @@ app.js (entry point — wiring only, <100 lines)
   ├── grid.js            — grid overlay, coordinate axes overlay
   ├── i18n-strings.js    — all translation strings (en/zh)
   └── lib/i18n.js        — i18n engine (shared utility)
+
+tests/
+  └── e2e/
+      ├── helpers.js       — shared: launch server, draw stroke, pixel check
+      ├── canvas.spec.js   — zoom, pan, draw freehand
+      ├── tools.spec.js    — switch tools, change color/width/dash
+      ├── shapes.spec.js   — place shape, drag anchor
+      ├── conversion.spec.js — draw-then-choose popup
+      └── export.spec.js   — save image, clipboard copy
+playwright.config.js       — Playwright config
+package.json               — devDependencies (playwright), test scripts
 ```
 
 ### Estimated module sizes
@@ -74,7 +85,11 @@ app.js (entry point — wiring only, <100 lines)
 | `grid.js` | ~100 | Grid overlay + coordinate axes background |
 | `i18n-strings.js` | ~250 | Translation dictionaries (en + zh) |
 | `style.css` | ~450 | Split if exceeds 500: `style.css` + `shapes.css` |
-| **Total** | **~3870** | |
+| `tests/e2e/helpers.js` | ~60 | Shared test utilities: serve, draw stroke, pixel check |
+| `tests/e2e/*.spec.js` | ~500 total | 6 critical path e2e tests |
+| `playwright.config.js` | ~20 | Playwright config |
+| `package.json` | ~15 | Playwright devDep + test scripts |
+| **Total** | **~4500** | |
 
 ### Shape module pattern
 
@@ -560,6 +575,85 @@ This is much more memory-efficient than copying the entire strokes array.
 
 ---
 
+## Testing Strategy
+
+### Approach
+Playwright e2e tests on **critical user paths only** — no trivial tests, no chasing coverage numbers. Tests run headless against a local static file server (`npx serve .`). Canvas interactions use Playwright's `page.mouse` API for precise pointer simulation.
+
+### Playwright MCP for dev verification
+During development, use **Playwright MCP** (browser automation tool) to visually verify canvas state after changes:
+- Take screenshots after drawing operations to confirm rendering
+- Click UI elements to verify toolbar/popup behavior
+- Serve the app locally and interact via MCP to spot-check before committing
+
+This is a **developer workflow tool**, not part of CI. Use it ad-hoc when implementing Phases 0-4 to catch visual regressions quickly.
+
+### Test file structure
+```
+tests/
+  e2e/
+    canvas.spec.js       — zoom, pan, draw freehand stroke
+    tools.spec.js        — switch tools, change color/width/dash
+    shapes.spec.js       — place shape from palette, drag anchor, verify position
+    conversion.spec.js   — draw line-like stroke → popup appears → click convert
+    export.spec.js       — draw something → save image → verify download
+    helpers.js           — shared: launch server, draw stroke helper, wait for render
+playwright.config.js     — config: baseURL, viewport (1024×768), headless
+package.json             — playwright devDependency, test script
+```
+
+All test files <200 lines. Total test code ~500-600 lines.
+
+### Critical path tests (6 tests total)
+
+| Test | What it verifies | Phase |
+|------|-----------------|-------|
+| **Canvas: draw freehand** | Click canvas, drag to draw, verify stroke appears (canvas has >0 non-white pixels in region) | Phase 0 |
+| **Canvas: zoom and pan** | Scroll wheel → canvas scale changes, drag with middle button → viewport shifts | Phase 1 |
+| **Tools: switch + style** | Click pen/eraser/select buttons, change color, change width, toggle dash — verify toolbar state | Phase 1 |
+| **Shapes: place + anchor drag** | Click circle in palette → shape appears → drag radius anchor → shape resizes | Phase 2 |
+| **Conversion: draw then choose** | Draw a straight-ish line → popup appears → click "Line" → freehand replaced with line shape | Phase 2 |
+| **Export: save image** | Draw a stroke → click save → verify download triggered | Phase 0 |
+
+### Canvas pixel verification pattern
+Since canvas content isn't in the DOM, tests use `page.evaluate()` to check canvas state:
+
+```js
+// Helper: check if a region of the canvas has non-white pixels
+async function hasDrawnPixels(page, x, y, w, h) {
+  return page.evaluate(({ x, y, w, h }) => {
+    const canvas = document.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    const data = ctx.getImageData(x, y, w, h).data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] < 250 || data[i+1] < 250 || data[i+2] < 250) return true;
+    }
+    return false;
+  }, { x, y, w, h });
+}
+```
+
+### Running tests
+```bash
+npm test              # runs all e2e tests headless
+npm run test:headed   # runs with visible browser (debugging)
+```
+
+### CI integration
+Tests run in the **Deploy App** workflow after build, before push to ACR:
+
+```yaml
+- name: Run e2e tests
+  run: |
+    npx serve . -l 8080 &
+    sleep 2
+    npx playwright test
+```
+
+If tests fail, the deploy is blocked. Keeps the bar high without slowing iteration.
+
+---
+
 ## Migration Strategy
 
 ### Phase 0 prerequisite: Modular decomposition
@@ -634,7 +728,10 @@ After decomposition: **no file >500 lines**, behavior unchanged. All modules use
 - [ ] **0.12 Extract `images.js`** — drop zone, image import, drag
 - [ ] **0.13 Slim `app.js`** — entry point only (~80 lines): init, wire modules
 - [ ] **0.14 Split `style.css`** — base layout+toolbar in `style.css` (~300), shape/popup/anchor styles in `shapes.css` (~200)
-- [ ] **0.15 Verify** — app works identically before and after (manual smoke test)
+- [ ] **0.15 Setup Playwright** — add `package.json` with playwright devDep, create `playwright.config.js`, `tests/e2e/helpers.js`
+- [ ] **0.16 Smoke test: draw freehand** — Playwright test: open app, draw stroke, verify pixels
+- [ ] **0.17 Smoke test: export** — Playwright test: draw stroke, click save, verify download
+- [ ] **0.18 Verify** — app works identically before and after (Playwright + manual)
 
 ### Estimated: ~0 new lines (pure move/refactor), 2-3 days
 
@@ -654,6 +751,8 @@ After decomposition: **no file >500 lines**, behavior unchanged. All modules use
 - [ ] **1.7 Property panel** — floating panel on selection: change color, width, dash of existing objects
 - [ ] **1.8 Remove sensitivity slider** — delete UI, smart shape settings, storage key
 - [ ] **1.9 History refactor** — command-based undo/redo replacing snapshot-based
+- [ ] **1.10 Test: zoom and pan** — Playwright test: scroll wheel zoom, drag pan, verify canvas transform
+- [ ] **1.11 Test: tool switching + styles** — Playwright test: click tools, change color/width/dash, verify toolbar UI state
 
 ### Estimated size: ~800 lines changed, ~200 lines new
 
@@ -674,6 +773,8 @@ After decomposition: **no file >500 lines**, behavior unchanged. All modules use
 - [ ] **2.8 Conversion popup** — after freehand stroke, detect candidates, show popup near stroke end
 - [ ] **2.9 Convert freehand → shape** — replace freehand object with typed shape object (line/circle/ellipse)
 - [ ] **2.10 Shape palette UI** — toolbar drawer/panel (initially with line, circle, ellipse)
+- [ ] **2.11 Test: place shape + drag anchor** — Playwright test: click shape in palette, verify shape appears, drag anchor, verify resize
+- [ ] **2.12 Test: draw then choose** — Playwright test: draw line-like stroke, verify popup, click convert, verify shape type changes
 
 ### Estimated size: ~600 lines new
 
@@ -720,11 +821,11 @@ After decomposition: **no file >500 lines**, behavior unchanged. All modules use
 
 | Phase | New/Changed Lines | Duration |
 |-------|-------------------|----------|
-| Phase 0 — Modular Decomposition | ~0 new (pure refactor) | ~3 days |
-| Phase 1 — Canvas + Core | ~1000 across modules | ~1 week |
-| Phase 2 — Shapes + Anchors | ~600 across modules | ~1 week |
+| Phase 0 — Modular Decomposition + Test Setup | ~600 new (tests + config) | ~3 days |
+| Phase 1 — Canvas + Core + Tests | ~1200 across modules | ~1 week |
+| Phase 2 — Shapes + Anchors + Tests | ~800 across modules | ~1 week |
 | Phase 3 — Math Curves | ~500 (mostly new shape modules) | ~1 week |
 | Phase 4 — Polish | ~400 across modules | ~1 week |
-| **Total** | **~2500 new** | **~5 weeks** |
+| **Total** | **~3500 new** | **~5 weeks** |
 
-v1: 1 file × 2714 lines. v2: ~20 modules, each <500 lines, ~3870 total lines.
+v1: 1 file × 2714 lines. v2: ~20 modules + 6 test files, each <500 lines, ~4500 total lines.
