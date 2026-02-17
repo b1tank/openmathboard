@@ -1,7 +1,7 @@
 // OpenMathBoard — Export (copy to clipboard, save image)
-import { getStrokes, getCanvasRect, getDomRefs, getCamera } from './state.js';
-import { renderFreehand } from './shapes/freehand.js';
-import { t } from './lib/i18n.js';
+import { getStrokes, getCanvasRect, getDomRefs, getCamera } from '../core/state.js';
+import { renderFreehand } from '../shapes/freehand.js';
+import { t } from '../i18n/i18n.js';
 import { showToast } from './toast.js';
 
 export async function copyToClipboard() {

@@ -2,10 +2,10 @@
 // Positioned adjacent to selection. Auto-sizes to content. Responsive.
 import {
 	getStrokes, getSelectedStrokes, getCamera
-} from './state.js';
-import { redrawCanvas, getStrokeBounds } from './renderer.js';
-import { saveToHistory } from './history.js';
-import { deleteSelectedStrokes } from './selection.js';
+} from '../core/state.js';
+import { redrawCanvas, getStrokeBounds } from '../canvas/renderer.js';
+import { saveToHistory } from '../core/history.js';
+import { deleteSelectedStrokes } from '../interaction/selection.js';
 
 let panelEl = null;
 const PANEL_GAP = 12;

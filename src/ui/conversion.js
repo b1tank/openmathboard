@@ -1,12 +1,12 @@
 // OpenMathBoard — "Draw then choose" conversion popup
-import { getStrokes, getCamera } from './state.js';
+import { getStrokes, getCamera } from '../core/state.js';
 import {
 	detectLine, detectCircle, detectParabola,
 	getSmartShapeParams, simplifyStrokePoints, getBounds, generateCirclePoints
-} from './detection.js';
-import { redrawCanvas } from './renderer.js';
-import { saveToHistory } from './history.js';
-import { t } from './lib/i18n.js';
+} from '../interaction/detection.js';
+import { redrawCanvas } from '../canvas/renderer.js';
+import { saveToHistory } from '../core/history.js';
+import { t } from '../i18n/i18n.js';
 
 let popupEl = null;
 let popupTimer = null;

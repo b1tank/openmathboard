@@ -2,19 +2,19 @@
 import {
 	getStrokes, getSelectedStrokes, getIsSelecting, getSelectionRect,
 	getCanvasRect, getCtx, getCamera
-} from './state.js';
-import { renderFreehand } from './shapes/freehand.js';
-import { renderLine } from './shapes/line.js';
-import { renderCircle } from './shapes/circle.js';
-import { renderEllipse } from './shapes/ellipse.js';
-import { renderParabola } from './shapes/parabola.js';
-import { renderSine } from './shapes/sine.js';
-import { renderArrow } from './shapes/arrow.js';
-import { renderAxes } from './shapes/axes.js';
-import { renderNumberline } from './shapes/numberline.js';
-import { renderAxes3d } from './shapes/axes3d.js';
+} from '../core/state.js';
+import { renderFreehand } from '../shapes/freehand.js';
+import { renderLine } from '../shapes/line.js';
+import { renderCircle } from '../shapes/circle.js';
+import { renderEllipse } from '../shapes/ellipse.js';
+import { renderParabola } from '../shapes/parabola.js';
+import { renderSine } from '../shapes/sine.js';
+import { renderArrow } from '../shapes/arrow.js';
+import { renderAxes } from '../shapes/axes.js';
+import { renderNumberline } from '../shapes/numberline.js';
+import { renderAxes3d } from '../shapes/axes3d.js';
 import { renderAnchors } from './anchors.js';
-import { pointToSegmentDistance, pointToPolylineDistance, getBounds } from './detection.js';
+import { pointToSegmentDistance, pointToPolylineDistance, getBounds } from '../interaction/detection.js';
 import { renderGridOverlay } from './grid.js';
 
 // Shape renderer registry

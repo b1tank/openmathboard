@@ -1,6 +1,6 @@
 // Yummy Jars - Shared i18n (Internationalization) Utility
 // Usage:
-//   import { initI18n, t, setLanguage, getCurrentLang } from './lib/i18n.js';
+//   import { initI18n, t, setLanguage, getCurrentLang } from './i18n/i18n.js';
 //   initI18n({ storageKey: 'app.lang.v1', defaultLang: 'en', translations: TRANSLATIONS });
 
 let currentLang = 'en';

@@ -4,7 +4,7 @@ import {
 	getCurrentTool, setCurrentTool,
 	setCurrentColor, setCurrentStrokeWidth, setCurrentDash,
 	getDomRefs
-} from './state.js';
+} from '../core/state.js';
 import { clearSelection } from './selection.js';
 
 export function setTool(tool) {

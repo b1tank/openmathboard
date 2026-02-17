@@ -1,6 +1,6 @@
 // OpenMathBoard — Image import, drag/drop, paste
-import { getCanvasRect, getDomRefs } from './state.js';
-import { t } from './lib/i18n.js';
+import { getCanvasRect, getDomRefs } from '../core/state.js';
+import { t } from '../i18n/i18n.js';
 import { showToast } from './toast.js';
 import { hideHeroSection } from './hero.js';
 

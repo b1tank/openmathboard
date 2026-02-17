@@ -1,5 +1,5 @@
 // OpenMathBoard — Camera system (zoom, pan, world↔screen transforms)
-import { getCamera, updateCamera, getCanvasRect } from './state.js';
+import { getCamera, updateCamera, getCanvasRect } from '../core/state.js';
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 10;

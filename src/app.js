@@ -1,24 +1,24 @@
 // OpenMathBoard — Entry point (wiring only)
-import { TRANSLATIONS } from './i18n-strings.js';
-import { initI18n, applyTranslations, setupLanguagePicker } from './lib/i18n.js';
+import { TRANSLATIONS } from './i18n/strings.js';
+import { initI18n, applyTranslations, setupLanguagePicker } from './i18n/i18n.js';
 import {
 	TOOLS,
 	setCanvas, setCtx, setCanvasRect, setDomRefs,
 	getCanvas, getCtx, getCanvasRect, getDomRefs
-} from './state.js';
-import { redrawCanvas } from './renderer.js';
-import { setupCanvasListeners, setupKeyboardShortcuts } from './input.js';
-import { setupToolbarListeners } from './toolbar.js';
-import { setupDropZone, setupClipboard } from './images.js';
-import { setTool } from './tools.js';
-import { saveToHistory } from './history.js';
-import { initToast } from './toast.js';
-import { initHero } from './hero.js';
-import { setupWheelZoom, setupPinchZoom, setupSpacebarPan } from './camera.js';
-import { initPropertyPanel } from './property-panel.js';
-import { initConversionPopup } from './conversion.js';
-import { initShapePalette } from './palette.js';
-import { loadState, scheduleSave } from './persistence.js';
+} from './core/state.js';
+import { redrawCanvas } from './canvas/renderer.js';
+import { setupCanvasListeners, setupKeyboardShortcuts } from './interaction/input.js';
+import { setupToolbarListeners } from './ui/toolbar.js';
+import { setupDropZone, setupClipboard } from './ui/images.js';
+import { setTool } from './interaction/tools.js';
+import { saveToHistory } from './core/history.js';
+import { initToast } from './ui/toast.js';
+import { initHero } from './ui/hero.js';
+import { setupWheelZoom, setupPinchZoom, setupSpacebarPan } from './canvas/camera.js';
+import { initPropertyPanel } from './ui/property-panel.js';
+import { initConversionPopup } from './ui/conversion.js';
+import { initShapePalette } from './ui/palette.js';
+import { loadState, scheduleSave } from './core/persistence.js';
 
 // ============ Initialize i18n ============
 initI18n({

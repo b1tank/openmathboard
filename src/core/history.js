@@ -6,7 +6,7 @@ import {
 	setSelectedStrokes,
 	getDomRefs
 } from './state.js';
-import { redrawCanvas } from './renderer.js';
+import { redrawCanvas } from '../canvas/renderer.js';
 import { scheduleSave } from './persistence.js';
 
 export function saveToHistory() {

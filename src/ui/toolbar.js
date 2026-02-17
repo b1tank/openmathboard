@@ -1,15 +1,15 @@
 // OpenMathBoard — Toolbar setup, dropdowns, mobile menu
-import { getDomRefs, getCurrentDash } from './state.js';
-import { setTool, setColor, setStrokeWidth, setDash } from './tools.js';
-import { TOOLS } from './state.js';
-import { undo, redo } from './history.js';
+import { getDomRefs, getCurrentDash } from '../core/state.js';
+import { setTool, setColor, setStrokeWidth, setDash } from '../interaction/tools.js';
+import { TOOLS } from '../core/state.js';
+import { undo, redo } from '../core/history.js';
 import { copyToClipboard, saveImage } from './export.js';
 import { handleFileSelect } from './images.js';
-import { t } from './lib/i18n.js';
+import { t } from '../i18n/i18n.js';
 import { showToast } from './toast.js';
-import { setLanguage, applyTranslations } from './lib/i18n.js';
+import { setLanguage, applyTranslations } from '../i18n/i18n.js';
 import { toggleShapePalette } from './palette.js';
-import { toggleGrid, toggleAxesOverlay } from './grid.js';
+import { toggleGrid, toggleAxesOverlay } from '../canvas/grid.js';
 
 export function setupToolbarListeners() {
 	const refs = getDomRefs();
@@ -77,7 +77,7 @@ export function setupToolbarListeners() {
 			const on = toggleGrid();
 			gridBtn.classList.toggle('active', on);
 			// Trigger redraw via dynamic import to avoid circular dep
-			import('./renderer.js').then(m => m.redrawCanvas());
+			import('../canvas/renderer.js').then(m => m.redrawCanvas());
 		});
 	}
 
@@ -210,9 +210,9 @@ function setupMobileToolbar() {
 
 function clearCanvas() {
 	Promise.all([
-		import('./state.js'),
-		import('./renderer.js'),
-		import('./history.js')
+		import('../core/state.js'),
+		import('../canvas/renderer.js'),
+		import('../core/history.js')
 	]).then(([stateMod, rendererMod, historyMod]) => {
 		const refs = getDomRefs();
 		const strokes = stateMod.getStrokes();

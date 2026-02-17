@@ -13,26 +13,26 @@ import {
 	getIsDraggingAnchor, setIsDraggingAnchor,
 	getDraggingAnchorInfo, setDraggingAnchorInfo,
 	getCanvas, getCamera
-} from './state.js';
-import { redrawCanvas, drawStroke, isPointNearStroke } from './renderer.js';
+} from '../core/state.js';
+import { redrawCanvas, drawStroke, isPointNearStroke } from '../canvas/renderer.js';
 import {
 	findStrokeAtPoint, findStrokesInRect,
 	moveSelectedStrokes, clearSelection, updateSelectionCursor,
 	deleteSelectedStrokes, copySelectedStrokes, pasteStrokes
 } from './selection.js';
-import { saveToHistory, undo, redo } from './history.js';
+import { saveToHistory, undo, redo } from '../core/history.js';
 import { setTool } from './tools.js';
 import {
 	pointToSegmentDistance, pointToPolylineDistance
 } from './detection.js';
-import { t } from './lib/i18n.js';
-import { showToast } from './toast.js';
-import { saveImage } from './export.js';
-import { hideHeroSection } from './hero.js';
-import { isSpacebarPanning } from './camera.js';
-import { updatePropertyPanel } from './property-panel.js';
-import { showConversionPopup } from './conversion.js';
-import { findAnchorAtPoint, onAnchorDrag } from './anchors.js';
+import { t } from '../i18n/i18n.js';
+import { showToast } from '../ui/toast.js';
+import { saveImage } from '../ui/export.js';
+import { hideHeroSection } from '../ui/hero.js';
+import { isSpacebarPanning } from '../canvas/camera.js';
+import { updatePropertyPanel } from '../ui/property-panel.js';
+import { showConversionPopup } from '../ui/conversion.js';
+import { findAnchorAtPoint, onAnchorDrag } from '../canvas/anchors.js';
 
 // ============ Canvas event setup ============
 

@@ -6,12 +6,12 @@ import {
 	setSelectionRect, setIsSelecting, setIsDraggingSelection,
 	setDragStartPos, getClipboardStrokes, setClipboardStrokes,
 	getCurrentTool, getDomRefs
-} from './state.js';
-import { redrawCanvas, getStrokeBounds, isPointNearStroke } from './renderer.js';
-import { saveToHistory } from './history.js';
-import { t } from './lib/i18n.js';
-import { showToast } from './toast.js';
-import { updatePropertyPanel, hidePropertyPanel } from './property-panel.js';
+} from '../core/state.js';
+import { redrawCanvas, getStrokeBounds, isPointNearStroke } from '../canvas/renderer.js';
+import { saveToHistory } from '../core/history.js';
+import { t } from '../i18n/i18n.js';
+import { showToast } from '../ui/toast.js';
+import { updatePropertyPanel, hidePropertyPanel } from '../ui/property-panel.js';
 
 export function clearSelection() {
 	setSelectedStrokes([]);

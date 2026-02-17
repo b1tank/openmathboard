@@ -1,5 +1,5 @@
 // OpenMathBoard — Grid overlay + coordinate axes background
-import { getCamera, getCanvasRect } from './state.js';
+import { getCamera, getCanvasRect } from '../core/state.js';
 
 let showGrid = false;
 let showAxesOverlay = false;

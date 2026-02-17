@@ -1,5 +1,5 @@
 // OpenMathBoard — Anchor system (rendering, hit testing, drag handling)
-import { getCamera } from './state.js';
+import { getCamera } from '../core/state.js';
 import { worldToScreen } from './camera.js';
 
 const ANCHOR_SIZE = 12;

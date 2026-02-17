@@ -1,5 +1,5 @@
 // OpenMathBoard — Freehand stroke rendering + hit testing
-import { pointToPolylineDistance } from '../detection.js';
+import { pointToPolylineDistance } from '../interaction/detection.js';
 
 export function renderFreehand(ctx, stroke) {
 	if (!stroke || !stroke.points || stroke.points.length < 2) return;

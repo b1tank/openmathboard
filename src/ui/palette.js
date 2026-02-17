@@ -1,19 +1,19 @@
 // OpenMathBoard — Shape palette UI (toolbar drawer)
-import { getStrokes, getCamera, getCanvasRect } from './state.js';
-import { screenToWorld } from './camera.js';
-import { createDefaultLine } from './shapes/line.js';
-import { createDefaultCircle } from './shapes/circle.js';
-import { createDefaultEllipse } from './shapes/ellipse.js';
-import { createDefaultParabola } from './shapes/parabola.js';
-import { createDefaultSine, createDefaultCosine } from './shapes/sine.js';
-import { createDefaultArrow } from './shapes/arrow.js';
-import { createDefaultAxes } from './shapes/axes.js';
-import { createDefaultNumberline } from './shapes/numberline.js';
-import { createDefaultAxes3d } from './shapes/axes3d.js';
-import { redrawCanvas } from './renderer.js';
-import { saveToHistory } from './history.js';
+import { getStrokes, getCamera, getCanvasRect } from '../core/state.js';
+import { screenToWorld } from '../canvas/camera.js';
+import { createDefaultLine } from '../shapes/line.js';
+import { createDefaultCircle } from '../shapes/circle.js';
+import { createDefaultEllipse } from '../shapes/ellipse.js';
+import { createDefaultParabola } from '../shapes/parabola.js';
+import { createDefaultSine, createDefaultCosine } from '../shapes/sine.js';
+import { createDefaultArrow } from '../shapes/arrow.js';
+import { createDefaultAxes } from '../shapes/axes.js';
+import { createDefaultNumberline } from '../shapes/numberline.js';
+import { createDefaultAxes3d } from '../shapes/axes3d.js';
+import { redrawCanvas } from '../canvas/renderer.js';
+import { saveToHistory } from '../core/history.js';
 import { hideHeroSection } from './hero.js';
-import { t } from './lib/i18n.js';
+import { t } from '../i18n/i18n.js';
 
 let paletteEl = null;
 let isOpen = false;
