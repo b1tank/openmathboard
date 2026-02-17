@@ -13,7 +13,7 @@ import { setupDropZone, setupClipboard } from './ui/images.js';
 import { setTool } from './interaction/tools.js';
 import { saveToHistory } from './core/history.js';
 import { initToast } from './ui/toast.js';
-import { initHero } from './ui/hero.js';
+import { initHero, hideHeroSection } from './ui/hero.js';
 import { setupWheelZoom, setupPinchZoom, setupSpacebarPan } from './canvas/camera.js';
 import { initPropertyPanel } from './ui/property-panel.js';
 import { initConversionPopup } from './ui/conversion.js';
@@ -116,6 +116,7 @@ function init() {
 	// Load saved state, then save initial history
 	const loaded = loadState();
 	if (loaded) {
+		hideHeroSection();
 		redrawCanvas();
 	}
 	saveToHistory();
