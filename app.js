@@ -4,12 +4,11 @@ import { initI18n, applyTranslations, setupLanguagePicker } from './lib/i18n.js'
 import {
 	TOOLS,
 	setCanvas, setCtx, setCanvasRect, setDomRefs,
-	setSmartShapeDebugEnabled,
 	getCanvas, getCtx, getCanvasRect, getDomRefs
 } from './state.js';
 import { redrawCanvas } from './renderer.js';
 import { setupCanvasListeners, setupKeyboardShortcuts } from './input.js';
-import { setupToolbarListeners, loadSmartShapeSettings, updateSmartShapeUI } from './toolbar.js';
+import { setupToolbarListeners } from './toolbar.js';
 import { setupDropZone, setupClipboard } from './images.js';
 import { setTool } from './tools.js';
 import { saveToHistory } from './history.js';
@@ -66,17 +65,6 @@ function init() {
 		colorDropdownMobile: document.getElementById('colorDropdownMobile'),
 		strokeBtnMobile: document.getElementById('strokeBtnMobile'),
 		strokeDropdownMobile: document.getElementById('strokeDropdownMobile'),
-		smartShapeBtnMobile: document.getElementById('smartShapeBtnMobile'),
-		smartShapeDropdownMobile: document.getElementById('smartShapeDropdownMobile'),
-		smartShapeToggleMobile: document.getElementById('smartShapeToggleMobile'),
-		smartShapeSensitivityMobile: document.getElementById('smartShapeSensitivityMobile'),
-		smartShapeValueMobile: document.getElementById('smartShapeValueMobile'),
-		// Smart shapes desktop
-		smartShapeBtn: document.getElementById('smartShapeBtn'),
-		smartShapeDropdown: document.getElementById('smartShapeDropdown'),
-		smartShapeToggle: document.getElementById('smartShapeToggle'),
-		smartShapeSensitivity: document.getElementById('smartShapeSensitivity'),
-		smartShapeValue: document.getElementById('smartShapeValue'),
 	};
 	setDomRefs(refs);
 
@@ -86,14 +74,6 @@ function init() {
 
 	// Setup canvas
 	setupCanvas();
-
-	// Debug mode
-	try {
-		const qs = new URLSearchParams(window.location.search);
-		setSmartShapeDebugEnabled(qs.get('debug') === '1' || qs.get('debugShapes') === '1' || qs.has('debugShapes'));
-	} catch {
-		setSmartShapeDebugEnabled(false);
-	}
 
 	// Setup modules
 	setupToolbarListeners();
@@ -107,9 +87,6 @@ function init() {
 	setupWheelZoom(canvasEl, () => redrawCanvas());
 	setupPinchZoom(canvasEl, () => redrawCanvas());
 	setupSpacebarPan(canvasEl, () => redrawCanvas());
-
-	loadSmartShapeSettings();
-	updateSmartShapeUI();
 
 	// Property panel
 	initPropertyPanel();

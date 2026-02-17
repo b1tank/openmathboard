@@ -10,8 +10,7 @@ import {
 	getIsDraggingSelection, setIsDraggingSelection,
 	getDragStartPos, setDragStartPos,
 	getClipboardStrokes,
-	getSmartShapeSettings, getSmartShapeDebugEnabled,
-	getCanvas, getCamera, getDomRefs
+	getCanvas, getCamera
 } from './state.js';
 import { redrawCanvas, drawStroke, isPointNearStroke } from './renderer.js';
 import {
@@ -22,8 +21,6 @@ import {
 import { saveToHistory, undo, redo } from './history.js';
 import { setTool } from './tools.js';
 import {
-	recognizeAndSnapStroke,
-	maybeLogSmartShapeProgress, logSmartShapeFinalDecision,
 	pointToSegmentDistance, pointToPolylineDistance
 } from './detection.js';
 import { t } from './lib/i18n.js';
@@ -157,11 +154,6 @@ function onPointerMove(e) {
 		const stroke = getCurrentStroke();
 		stroke.points.push(pos);
 
-		const settings = getSmartShapeSettings();
-		if (settings.enabled && getSmartShapeDebugEnabled()) {
-			maybeLogSmartShapeProgress(stroke);
-		}
-
 		redrawCanvas();
 		const ctx = getCanvas().getContext('2d');
 		const camera = getCamera();
@@ -209,20 +201,7 @@ function onPointerUp() {
 
 	const currentStroke = getCurrentStroke();
 	if (getCurrentTool() === TOOLS.PEN && currentStroke && currentStroke.points.length > 1) {
-		const settings = getSmartShapeSettings();
-		const finalStroke = settings.enabled ? recognizeAndSnapStroke(currentStroke) : currentStroke;
-
-		if (settings.enabled && getSmartShapeDebugEnabled()) {
-			logSmartShapeFinalDecision(currentStroke, finalStroke);
-		}
-
-		if (finalStroke && finalStroke !== currentStroke && finalStroke.shape && finalStroke.shape.type) {
-			const shapeKey = 'shape' + finalStroke.shape.type.charAt(0).toUpperCase() + finalStroke.shape.type.slice(1);
-			const label = t(shapeKey);
-			showToast(t('toastSnappedTo') + ' ' + label, 'success');
-		}
-
-		getStrokes().push(finalStroke);
+		getStrokes().push(currentStroke);
 		saveToHistory();
 	}
 
@@ -321,13 +300,6 @@ export function setupKeyboardShortcuts() {
 		if (e.key === 'p' || e.key === 'P') setTool(TOOLS.PEN);
 		if (e.key === 'e' || e.key === 'E') setTool(TOOLS.ERASER);
 		if ((e.key === 's' || e.key === 'S') && !e.ctrlKey) setTool(TOOLS.SELECT);
-
-		if (e.key === 'g' || e.key === 'G') {
-			const settings = getSmartShapeSettings();
-			settings.enabled = !settings.enabled;
-			document.dispatchEvent(new CustomEvent('smartshape-toggled'));
-			showToast(settings.enabled ? t('toastSmartShapesOn') : t('toastSmartShapesOff'));
-		}
 
 		if (e.ctrlKey && e.key === 's') {
 			e.preventDefault();
