@@ -1,4 +1,6 @@
 // OpenMathBoard — Property editing panel (floating, contextual)
+// UX: positioned to the RIGHT of the selection bounding box, never overlapping the shape.
+// Follows shape during move/anchor drag. Falls back to left/below if no space on right.
 import {
 	getStrokes, getSelectedStrokes, getCamera
 } from './state.js';
@@ -7,6 +9,8 @@ import { saveToHistory } from './history.js';
 import { deleteSelectedStrokes } from './selection.js';
 
 let panelEl = null;
+const PANEL_WIDTH = 170;
+const PANEL_GAP = 14; // gap between shape edge and panel
 
 export function initPropertyPanel() {
 	panelEl = document.getElementById('propertyPanel');
@@ -16,8 +20,7 @@ export function initPropertyPanel() {
 	panelEl.querySelectorAll('.prop-color').forEach(btn => {
 		btn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			const color = btn.dataset.color;
-			applyToSelected(stroke => { stroke.color = color; });
+			applyToSelected(stroke => { stroke.color = btn.dataset.color; });
 		});
 	});
 
@@ -25,8 +28,7 @@ export function initPropertyPanel() {
 	panelEl.querySelectorAll('.prop-width').forEach(btn => {
 		btn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			const width = parseInt(btn.dataset.width);
-			applyToSelected(stroke => { stroke.width = width; });
+			applyToSelected(stroke => { stroke.width = parseInt(btn.dataset.width); });
 		});
 	});
 
@@ -34,8 +36,7 @@ export function initPropertyPanel() {
 	panelEl.querySelectorAll('.prop-dash-solid, .prop-dash-dashed').forEach(btn => {
 		btn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			const dash = btn.dataset.dash === 'true';
-			applyToSelected(stroke => { stroke.dash = dash; });
+			applyToSelected(stroke => { stroke.dash = btn.dataset.dash === 'true'; });
 		});
 	});
 
@@ -48,6 +49,9 @@ export function initPropertyPanel() {
 			hidePropertyPanel();
 		});
 	}
+
+	// Prevent pointer events on panel from reaching the canvas
+	panelEl.addEventListener('pointerdown', (e) => e.stopPropagation());
 }
 
 function applyToSelected(fn) {
@@ -69,49 +73,61 @@ export function updatePropertyPanel() {
 		return;
 	}
 
-	showPropertyPanel();
+	positionPanel();
+	panelEl.classList.add('show');
 }
 
-function showPropertyPanel() {
+function positionPanel() {
 	if (!panelEl) return;
 
 	const selected = getSelectedStrokes();
 	const strokes = getStrokes();
 	const camera = getCamera();
+	const toolbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-height')) || 56;
 
-	// Position near the selection's bounding box
-	let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+	// Compute selection bounding box in screen coords
+	let sMinX = Infinity, sMinY = Infinity, sMaxX = -Infinity, sMaxY = -Infinity;
 	for (const idx of selected) {
 		const bounds = getStrokeBounds(strokes[idx]);
 		if (!bounds) continue;
-		const screenMinX = (bounds.minX - camera.x) * camera.zoom;
-		const screenMinY = (bounds.minY - camera.y) * camera.zoom;
-		const screenMaxX = (bounds.maxX - camera.x) * camera.zoom;
-		const screenMaxY = (bounds.maxY - camera.y) * camera.zoom;
-		if (screenMinX < minX) minX = screenMinX;
-		if (screenMinY < minY) minY = screenMinY;
-		if (screenMaxX > maxX) maxX = screenMaxX;
-		if (screenMaxY > maxY) maxY = screenMaxY;
+		const x1 = (bounds.minX - camera.x) * camera.zoom;
+		const y1 = (bounds.minY - camera.y) * camera.zoom;
+		const x2 = (bounds.maxX - camera.x) * camera.zoom;
+		const y2 = (bounds.maxY - camera.y) * camera.zoom;
+		sMinX = Math.min(sMinX, x1);
+		sMinY = Math.min(sMinY, y1);
+		sMaxX = Math.max(sMaxX, x2);
+		sMaxY = Math.max(sMaxY, y2);
 	}
 
-	// Position above the selection (toolbar height offset)
-	const toolbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-height')) || 56;
-	const panelWidth = 200;
-	const centerX = (minX + maxX) / 2;
-	let left = centerX - panelWidth / 2;
-	let top = minY + toolbarH - 10;
+	const panelHeight = panelEl.offsetHeight || 160;
+	const vpW = window.innerWidth;
+	const vpH = window.innerHeight;
 
-	// If above selection would go above toolbar, place below
-	if (top < toolbarH + 8) {
-		top = maxY + toolbarH + 10;
+	// Strategy 1: RIGHT of selection
+	let left = sMaxX + PANEL_GAP;
+	let top = sMinY + toolbarH;
+
+	// If panel would go off-screen right, try LEFT of selection
+	if (left + PANEL_WIDTH > vpW - 8) {
+		left = sMinX - PANEL_WIDTH - PANEL_GAP;
 	}
 
-	// Keep within viewport
-	left = Math.max(8, Math.min(window.innerWidth - panelWidth - 8, left));
+	// If still off-screen left, place BELOW selection
+	if (left < 8) {
+		left = Math.max(8, Math.min(sMinX, vpW - PANEL_WIDTH - 8));
+		top = sMaxY + toolbarH + PANEL_GAP;
+	}
+
+	// Clamp vertically
+	top = Math.max(toolbarH + 8, Math.min(top, vpH - panelHeight - 8));
+
+	// Clamp horizontally
+	left = Math.max(8, Math.min(left, vpW - PANEL_WIDTH - 8));
 
 	panelEl.style.left = left + 'px';
 	panelEl.style.top = top + 'px';
-	panelEl.classList.add('show');
+	panelEl.style.width = PANEL_WIDTH + 'px';
 }
 
 export function hidePropertyPanel() {
