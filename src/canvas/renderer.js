@@ -90,7 +90,8 @@ export function drawStroke(ctx, stroke, camera) {
 	ctx.lineWidth = stroke.width || 4;
 	ctx.lineCap = 'round';
 	ctx.lineJoin = 'round';
-	ctx.setLineDash(stroke.dash ? [8, 6] : []);
+	const w = stroke.width || 4;
+	ctx.setLineDash(stroke.dash ? [w * 2, w * 2] : []);
 
 	// Use shape registry for typed shapes
 	if (stroke.shape && RENDERERS[stroke.shape.type]) {
