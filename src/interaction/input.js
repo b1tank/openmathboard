@@ -14,7 +14,7 @@ import {
 	getDraggingAnchorInfo, setDraggingAnchorInfo,
 	getCanvas, getCamera
 } from '../core/state.js';
-import { redrawCanvas, drawStroke, isPointNearStroke } from '../canvas/renderer.js';
+import { redrawCanvas, drawStroke, isPointNearStroke, getStrokeBounds } from '../canvas/renderer.js';
 import {
 	findStrokeAtPoint, findStrokesInRect,
 	moveSelectedStrokes, clearSelection, updateSelectionCursor,
@@ -124,10 +124,18 @@ function onPointerDown(e) {
 			}
 		}
 
-		// 2. Check if clicking on already selected stroke body → drag selection
+		// 2. Check if clicking inside the selection bounding box → drag selection
 		if (selected.length > 0) {
-			const clickedOnSelected = selected.some(idx => isPointNearStroke(pos, strokes[idx]));
-			if (clickedOnSelected) {
+			const PADDING = 6; // must match renderer padding
+			const insideBounds = selected.some(idx => {
+				const bounds = getStrokeBounds(strokes[idx]);
+				if (!bounds) return false;
+				return pos.x >= bounds.minX - PADDING / camera.zoom &&
+				       pos.x <= bounds.maxX + PADDING / camera.zoom &&
+				       pos.y >= bounds.minY - PADDING / camera.zoom &&
+				       pos.y <= bounds.maxY + PADDING / camera.zoom;
+			});
+			if (insideBounds) {
 				setIsDraggingSelection(true);
 				setDragStartPos(pos);
 				return;
