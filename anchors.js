@@ -2,8 +2,8 @@
 import { getCamera } from './state.js';
 import { worldToScreen } from './camera.js';
 
-const ANCHOR_SIZE = 8;
-const HIT_THRESHOLD = 22; // screen pixels
+const ANCHOR_SIZE = 12;
+const HIT_THRESHOLD = 28; // screen pixels — large for touch targets
 
 // ============ Get anchors for any shape type ============
 
