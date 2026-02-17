@@ -13,3 +13,5 @@ infra/*.json
 app.js.bak
 node_modules/
 .playwright-mcp/
+
+test-results/
