@@ -4,7 +4,8 @@ import { initI18n, applyTranslations, setupLanguagePicker } from './i18n/i18n.js
 import {
 	TOOLS,
 	setCanvas, setCtx, setCanvasRect, setDomRefs,
-	getCanvas, getCtx, getCanvasRect, getDomRefs
+	getCanvas, getCtx, getCanvasRect, getDomRefs,
+	getStrokes
 } from './core/state.js';
 import { redrawCanvas } from './canvas/renderer.js';
 import { setupCanvasListeners, setupKeyboardShortcuts } from './interaction/input.js';
@@ -114,11 +115,11 @@ function init() {
 	setTool(TOOLS.PEN);
 
 	// Load saved state, then save initial history
-	const loaded = loadState();
-	if (loaded) {
+	loadState();
+	if (getStrokes().length > 0) {
 		hideHeroSection();
-		redrawCanvas();
 	}
+	redrawCanvas();
 	saveToHistory();
 }
 
