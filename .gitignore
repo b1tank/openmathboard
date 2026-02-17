@@ -11,3 +11,4 @@ infra/*.json
 *.swp
 *.swo
 app.js.bak
+node_modules/

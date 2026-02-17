@@ -1,0 +1,13 @@
+{
+  "name": "openmathboard",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "serve": "npx serve . -l 8080"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
