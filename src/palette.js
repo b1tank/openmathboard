@@ -37,7 +37,7 @@ const SHAPE_ICONS = {
 	ellipse: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="16" cy="16" rx="14" ry="9"/></svg>',
 	parabola: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 28 Q16 0 28 28"/></svg>',
 	sine: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16 C8 4 12 4 16 16 S24 28 30 16"/></svg>',
-	cosine: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6 C8 6 8 26 16 26 S24 6 30 6"/></svg>',
+	cosine: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8 C8 8 8 24 16 24 S24 8 30 8"/></svg>',
 	arrow: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="16" x2="24" y2="16"/><polyline points="20 10 26 16 20 22"/></svg>',
 	numberline: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="16" x2="30" y2="16"/><polyline points="26 12 30 16 26 20"/><polyline points="6 12 2 16 6 20"/><line x1="10" y1="13" x2="10" y2="19"/><line x1="16" y1="12" x2="16" y2="20"/><line x1="22" y1="13" x2="22" y2="19"/></svg>',
 	axes: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="20" x2="28" y2="20"/><line x1="10" y1="28" x2="10" y2="4"/><polyline points="6 8 10 4 14 8"/><polyline points="24 16 28 20 24 24"/></svg>',
