@@ -10,6 +10,8 @@ import {
 	getIsDraggingSelection, setIsDraggingSelection,
 	getDragStartPos, setDragStartPos,
 	getClipboardStrokes,
+	getIsDraggingAnchor, setIsDraggingAnchor,
+	getDraggingAnchorInfo, setDraggingAnchorInfo,
 	getCanvas, getCamera
 } from './state.js';
 import { redrawCanvas, drawStroke, isPointNearStroke } from './renderer.js';
@@ -30,6 +32,7 @@ import { hideHeroSection } from './hero.js';
 import { isSpacebarPanning } from './camera.js';
 import { updatePropertyPanel } from './property-panel.js';
 import { showConversionPopup } from './conversion.js';
+import { findAnchorAtPoint, onAnchorDrag } from './anchors.js';
 
 // ============ Canvas event setup ============
 
@@ -80,7 +83,24 @@ function onPointerDown(e) {
 	if (getCurrentTool() === TOOLS.SELECT) {
 		const selected = getSelectedStrokes();
 		const strokes = getStrokes();
+		const camera = getCamera();
 
+		// 1. Check if clicking on an anchor of a selected shape
+		if (selected.length > 0) {
+			for (const idx of selected) {
+				const stroke = strokes[idx];
+				if (!stroke || !stroke.shape) continue;
+				const anchor = findAnchorAtPoint(stroke, pos, camera);
+				if (anchor) {
+					setIsDraggingAnchor(true);
+					setDraggingAnchorInfo({ strokeIdx: idx, anchorId: anchor.id });
+					setDragStartPos(pos);
+					return;
+				}
+			}
+		}
+
+		// 2. Check if clicking on already selected stroke body → drag selection
 		if (selected.length > 0) {
 			const clickedOnSelected = selected.some(idx => isPointNearStroke(pos, strokes[idx]));
 			if (clickedOnSelected) {
@@ -90,20 +110,24 @@ function onPointerDown(e) {
 			}
 		}
 
+		// 3. Check if clicking on any stroke → select it
 		const clickedStrokeIdx = findStrokeAtPoint(pos);
 		if (clickedStrokeIdx !== -1) {
 			setSelectedStrokes([clickedStrokeIdx]);
 			setDragStartPos(pos);
 			setIsDraggingSelection(true);
 			updateSelectionCursor();
+			updatePropertyPanel();
 			redrawCanvas();
 			return;
 		}
 
+		// 4. Start rectangle selection
 		setSelectedStrokes([]);
 		setIsSelecting(true);
 		setSelectionRect({ x1: pos.screenX, y1: pos.screenY, x2: pos.screenX, y2: pos.screenY });
 		updateSelectionCursor();
+		updatePropertyPanel();
 		redrawCanvas();
 		return;
 	}
@@ -128,6 +152,19 @@ function onPointerMove(e) {
 	const pos = getPointerPos(e);
 
 	if (getCurrentTool() === TOOLS.SELECT) {
+		// Anchor dragging
+		if (getIsDraggingAnchor() && getDraggingAnchorInfo()) {
+			const info = getDraggingAnchorInfo();
+			const strokes = getStrokes();
+			const stroke = strokes[info.strokeIdx];
+			if (stroke) {
+				onAnchorDrag(stroke, info.anchorId, pos);
+				redrawCanvas();
+				updatePropertyPanel();
+			}
+			return;
+		}
+
 		if (getIsDraggingSelection() && getDragStartPos()) {
 			const start = getDragStartPos();
 			const dx = pos.x - start.x;
@@ -135,6 +172,7 @@ function onPointerMove(e) {
 			moveSelectedStrokes(dx, dy);
 			setDragStartPos(pos);
 			redrawCanvas();
+			updatePropertyPanel();
 			return;
 		}
 
@@ -168,12 +206,22 @@ function onPointerMove(e) {
 
 function onPointerUp() {
 	if (getCurrentTool() === TOOLS.SELECT) {
+		// End anchor drag
+		if (getIsDraggingAnchor()) {
+			setIsDraggingAnchor(false);
+			setDraggingAnchorInfo(null);
+			saveToHistory();
+			updatePropertyPanel();
+			return;
+		}
+
 		if (getIsDraggingSelection()) {
 			setIsDraggingSelection(false);
 			setDragStartPos(null);
 			if (getSelectedStrokes().length > 0) {
 				saveToHistory();
 			}
+			updatePropertyPanel();
 			return;
 		}
 

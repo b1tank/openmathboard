@@ -43,6 +43,10 @@ let isDraggingSelection = false;
 let dragStartPos = null;
 let clipboardStrokes = [];
 
+// Anchor drag state
+let isDraggingAnchor = false;
+let draggingAnchorInfo = null; // { strokeIdx, anchorId }
+
 // Smart shape state
 let smartShapeSettings = { ...SMART_SHAPE_DEFAULTS };
 let smartShapeDebugEnabled = false;
@@ -74,6 +78,8 @@ export function getIsSelecting() { return isSelecting; }
 export function getIsDraggingSelection() { return isDraggingSelection; }
 export function getDragStartPos() { return dragStartPos; }
 export function getClipboardStrokes() { return clipboardStrokes; }
+export function getIsDraggingAnchor() { return isDraggingAnchor; }
+export function getDraggingAnchorInfo() { return draggingAnchorInfo; }
 export function getSmartShapeSettings() { return smartShapeSettings; }
 export function getSmartShapeDebugEnabled() { return smartShapeDebugEnabled; }
 export function getLastSmartShapeDebugAt() { return lastSmartShapeDebugAt; }
@@ -100,6 +106,8 @@ export function setIsSelecting(v) { isSelecting = v; }
 export function setIsDraggingSelection(v) { isDraggingSelection = v; }
 export function setDragStartPos(v) { dragStartPos = v; }
 export function setClipboardStrokes(v) { clipboardStrokes = v; }
+export function setIsDraggingAnchor(v) { isDraggingAnchor = v; }
+export function setDraggingAnchorInfo(v) { draggingAnchorInfo = v; }
 export function setSmartShapeSettings(v) { smartShapeSettings = v; }
 export function setSmartShapeDebugEnabled(v) { smartShapeDebugEnabled = v; }
 export function setLastSmartShapeDebugAt(v) { lastSmartShapeDebugAt = v; }
