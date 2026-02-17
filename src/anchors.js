@@ -67,8 +67,23 @@ export function getAnchors(obj) {
 				{ id: 'yNegEnd', x: s.ox, y: s.oy - yNeg, type: 'scale' },   // up
 				{ id: 'yPosEnd', x: s.ox, y: s.oy + yPos, type: 'scale' },   // down
 			];
-		}
-		default:
+		}		case 'numberline':
+			return [
+				{ id: 'center', x: obj.shape.ox, y: obj.shape.oy, type: 'center' },
+				{ id: 'left', x: obj.shape.ox - obj.shape.leftLen, y: obj.shape.oy, type: 'endpoint' },
+				{ id: 'right', x: obj.shape.ox + obj.shape.rightLen, y: obj.shape.oy, type: 'endpoint' },
+			];
+		case 'axes3d': {
+			const s3 = obj.shape;
+			const cosZ = Math.cos(Math.PI - Math.PI / 6);
+			const sinZ = Math.sin(Math.PI - Math.PI / 6);
+			return [
+				{ id: 'origin', x: s3.ox, y: s3.oy, type: 'center' },
+				{ id: 'xEnd', x: s3.ox + s3.xLen, y: s3.oy, type: 'scale' },
+				{ id: 'yEnd', x: s3.ox, y: s3.oy - s3.yLen, type: 'scale' },
+				{ id: 'zEnd', x: s3.ox + s3.zLen * cosZ, y: s3.oy - s3.zLen * sinZ, type: 'scale' },
+			];
+		}		default:
 			return [];
 	}
 }
@@ -150,6 +165,25 @@ export function onAnchorDrag(obj, anchorId, newWorldPos) {
 			if (anchorId === 'yNegEnd') { obj.shape.yNegLen = Math.max(20, obj.shape.oy - newWorldPos.y); }
 			if (anchorId === 'yPosEnd') { obj.shape.yPosLen = Math.max(20, newWorldPos.y - obj.shape.oy); }
 			break;
+		case 'numberline':
+			if (anchorId === 'center') { obj.shape.ox = newWorldPos.x; obj.shape.oy = newWorldPos.y; }
+			if (anchorId === 'left') { obj.shape.leftLen = Math.max(20, obj.shape.ox - newWorldPos.x); }
+			if (anchorId === 'right') { obj.shape.rightLen = Math.max(20, newWorldPos.x - obj.shape.ox); }
+			break;
+		case 'axes3d': {
+			const s3 = obj.shape;
+			if (anchorId === 'origin') { s3.ox = newWorldPos.x; s3.oy = newWorldPos.y; }
+			if (anchorId === 'xEnd') { s3.xLen = Math.max(20, newWorldPos.x - s3.ox); }
+			if (anchorId === 'yEnd') { s3.yLen = Math.max(20, s3.oy - newWorldPos.y); }
+			if (anchorId === 'zEnd') {
+				// Distance from origin to point along z direction
+				const cosZ = Math.cos(Math.PI - Math.PI / 6);
+				const sinZ = Math.sin(Math.PI - Math.PI / 6);
+				const dx = newWorldPos.x - s3.ox, dy = newWorldPos.y - s3.oy;
+				s3.zLen = Math.max(20, (dx * cosZ - dy * sinZ));
+			}
+			break;
+		}
 	}
 }
 

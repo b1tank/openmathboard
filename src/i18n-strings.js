@@ -89,7 +89,9 @@ export const TRANSLATIONS = {
 		shapeSine: 'Sine',
 		shapeCosine: 'Cosine',
 		shapeArrow: 'Arrow',
-		shapeAxes: 'Axes',
+		shapeAxes: 'Axes (2D)',
+		shapeNumberline: 'Number Line',
+		shapeAxes3d: 'Axes (3D)',
 
 		// Hero section
 		heroTitle: 'Welcome to',
@@ -206,7 +208,9 @@ export const TRANSLATIONS = {
 		shapeSine: '正弦',
 		shapeCosine: '余弦',
 		shapeArrow: '箭头',
-		shapeAxes: '坐标轴',
+		shapeAxes: '坐标轴 (2D)',
+		shapeNumberline: '数轴',
+		shapeAxes3d: '坐标轴 (3D)',
 
 		// Hero section
 		heroTitle: '欢迎使用',

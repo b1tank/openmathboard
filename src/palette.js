@@ -8,6 +8,8 @@ import { createDefaultParabola } from './shapes/parabola.js';
 import { createDefaultSine, createDefaultCosine } from './shapes/sine.js';
 import { createDefaultArrow } from './shapes/arrow.js';
 import { createDefaultAxes } from './shapes/axes.js';
+import { createDefaultNumberline } from './shapes/numberline.js';
+import { createDefaultAxes3d } from './shapes/axes3d.js';
 import { redrawCanvas } from './renderer.js';
 import { saveToHistory } from './history.js';
 import { hideHeroSection } from './hero.js';
@@ -25,6 +27,8 @@ const SHAPE_CONSTRUCTORS = {
 	cosine: createDefaultCosine,
 	arrow: createDefaultArrow,
 	axes: createDefaultAxes,
+	numberline: createDefaultNumberline,
+	axes3d: createDefaultAxes3d,
 };
 
 const SHAPE_ICONS = {
@@ -35,7 +39,9 @@ const SHAPE_ICONS = {
 	sine: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16 C8 4 12 4 16 16 S24 28 30 16"/></svg>',
 	cosine: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6 C8 6 8 26 16 26 S24 6 30 6"/></svg>',
 	arrow: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="16" x2="24" y2="16"/><polyline points="20 10 26 16 20 22"/></svg>',
-	axes: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="24" x2="28" y2="24"/><line x1="8" y1="28" x2="8" y2="4"/><polyline points="4 8 8 4 12 8"/><polyline points="24 20 28 24 24 28"/></svg>',
+	numberline: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="16" x2="30" y2="16"/><polyline points="26 12 30 16 26 20"/><polyline points="6 12 2 16 6 20"/><line x1="10" y1="13" x2="10" y2="19"/><line x1="16" y1="12" x2="16" y2="20"/><line x1="22" y1="13" x2="22" y2="19"/></svg>',
+	axes: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="20" x2="28" y2="20"/><line x1="10" y1="28" x2="10" y2="4"/><polyline points="6 8 10 4 14 8"/><polyline points="24 16 28 20 24 24"/></svg>',
+	axes3d: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="14" y1="18" x2="28" y2="18"/><line x1="14" y1="18" x2="14" y2="4"/><line x1="14" y1="18" x2="4" y2="26"/><polyline points="24 14 28 18 24 22"/><polyline points="10 8 14 4 18 8"/></svg>',
 };
 
 export function initShapePalette() {
@@ -66,7 +72,7 @@ function buildPalette() {
 	const grid = document.createElement('div');
 	grid.className = 'shape-palette-grid';
 
-	const shapes = ['line', 'circle', 'ellipse', 'parabola', 'sine', 'cosine', 'arrow', 'axes'];
+	const shapes = ['line', 'circle', 'ellipse', 'parabola', 'sine', 'cosine', 'arrow', 'numberline', 'axes', 'axes3d'];
 	for (const shape of shapes) {
 		const i18nKey = 'shape' + shape.charAt(0).toUpperCase() + shape.slice(1);
 		const item = document.createElement('button');
