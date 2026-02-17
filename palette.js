@@ -54,8 +54,12 @@ export function initShapePalette() {
 function buildPalette() {
 	if (!paletteEl) return;
 
+	// Clear previous content (for rebuild on language change)
+	paletteEl.innerHTML = '';
+
 	const title = document.createElement('div');
 	title.className = 'shape-palette-title';
+	title.setAttribute('data-i18n', 'shapePalette');
 	title.textContent = t('shapePalette');
 	paletteEl.appendChild(title);
 
@@ -64,15 +68,27 @@ function buildPalette() {
 
 	const shapes = ['line', 'circle', 'ellipse', 'parabola', 'sine', 'cosine', 'arrow', 'axes'];
 	for (const shape of shapes) {
+		const i18nKey = 'shape' + shape.charAt(0).toUpperCase() + shape.slice(1);
 		const item = document.createElement('button');
 		item.className = 'shape-palette-item';
 		item.dataset.shape = shape;
-		item.innerHTML = `${SHAPE_ICONS[shape] || ''}<span>${t('shape' + shape.charAt(0).toUpperCase() + shape.slice(1))}</span>`;
+		item.innerHTML = `${SHAPE_ICONS[shape] || ''}<span data-i18n="${i18nKey}">${t(i18nKey)}</span>`;
 		item.addEventListener('click', () => placeShape(shape));
 		grid.appendChild(item);
 	}
 
 	paletteEl.appendChild(grid);
+}
+
+/**
+ * Rebuild palette labels on language change.
+ * Called externally after applyTranslations().
+ */
+export function refreshPaletteLabels() {
+	if (!paletteEl) return;
+	paletteEl.querySelectorAll('[data-i18n]').forEach(el => {
+		el.textContent = t(el.dataset.i18n);
+	});
 }
 
 function placeShape(shapeType) {
