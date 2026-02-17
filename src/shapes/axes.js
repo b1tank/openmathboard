@@ -1,62 +1,60 @@
-// OpenMathBoard — Coordinate axes shape: x-y axes with tick marks
+// OpenMathBoard — 2-D Coordinate axes with 4 independent arms + tick toggle
 
 export function renderAxes(ctx, obj) {
 	if (!obj.shape) return;
-	const { ox, oy, xLen, yLen } = obj.shape;
+	const s = obj.shape;
+	const { ox, oy } = s;
+	const xPos = s.xPosLen || s.xLen || 120;
+	const xNeg = s.xNegLen || s.xLen || 120;
+	const yPos = s.yPosLen || s.yLen || 120; // downward in screen coords
+	const yNeg = s.yNegLen || s.yLen || 120; // upward in screen coords
 
-	// X axis
+	// X axis (left to right)
 	ctx.beginPath();
-	ctx.moveTo(ox - xLen, oy);
-	ctx.lineTo(ox + xLen, oy);
+	ctx.moveTo(ox - xNeg, oy);
+	ctx.lineTo(ox + xPos, oy);
 	ctx.stroke();
 
-	// Y axis
+	// Y axis (bottom to top, screen coords inverted)
 	ctx.beginPath();
-	ctx.moveTo(ox, oy + yLen);
-	ctx.lineTo(ox, oy - yLen);
+	ctx.moveTo(ox, oy + yPos);
+	ctx.lineTo(ox, oy - yNeg);
 	ctx.stroke();
 
 	// Arrowheads
-	const headLen = 10;
-	const headAngle = Math.PI / 6;
+	const hl = 10, ha = Math.PI / 6;
+	drawArrowhead(ctx, ox + xPos, oy, 0, hl, ha);       // +x
+	drawArrowhead(ctx, ox - xNeg, oy, Math.PI, hl, ha);  // -x
+	drawArrowhead(ctx, ox, oy - yNeg, -Math.PI / 2, hl, ha); // -y (up)
+	drawArrowhead(ctx, ox, oy + yPos, Math.PI / 2, hl, ha);  // +y (down)
 
-	// X arrow
-	ctx.beginPath();
-	ctx.moveTo(ox + xLen, oy);
-	ctx.lineTo(ox + xLen - headLen * Math.cos(headAngle), oy - headLen * Math.sin(headAngle));
-	ctx.moveTo(ox + xLen, oy);
-	ctx.lineTo(ox + xLen - headLen * Math.cos(headAngle), oy + headLen * Math.sin(headAngle));
-	ctx.stroke();
+	// Tick marks (optional)
+	if (s.showTicks !== false) {
+		const tickSize = 5;
+		const tickSpacing = 30;
 
-	// Y arrow
-	ctx.beginPath();
-	ctx.moveTo(ox, oy - yLen);
-	ctx.lineTo(ox - headLen * Math.sin(headAngle), oy - yLen + headLen * Math.cos(headAngle));
-	ctx.moveTo(ox, oy - yLen);
-	ctx.lineTo(ox + headLen * Math.sin(headAngle), oy - yLen + headLen * Math.cos(headAngle));
-	ctx.stroke();
-
-	// Tick marks
-	const tickSize = 5;
-	const tickSpacing = 30;
-
-	// X ticks
-	for (let x = ox - xLen + tickSpacing; x < ox + xLen; x += tickSpacing) {
-		if (Math.abs(x - ox) < tickSpacing / 2) continue; // skip origin
-		ctx.beginPath();
-		ctx.moveTo(x, oy - tickSize);
-		ctx.lineTo(x, oy + tickSize);
-		ctx.stroke();
+		for (let x = ox + tickSpacing; x < ox + xPos; x += tickSpacing) {
+			ctx.beginPath(); ctx.moveTo(x, oy - tickSize); ctx.lineTo(x, oy + tickSize); ctx.stroke();
+		}
+		for (let x = ox - tickSpacing; x > ox - xNeg; x -= tickSpacing) {
+			ctx.beginPath(); ctx.moveTo(x, oy - tickSize); ctx.lineTo(x, oy + tickSize); ctx.stroke();
+		}
+		for (let y = oy - tickSpacing; y > oy - yNeg; y -= tickSpacing) {
+			ctx.beginPath(); ctx.moveTo(ox - tickSize, y); ctx.lineTo(ox + tickSize, y); ctx.stroke();
+		}
+		for (let y = oy + tickSpacing; y < oy + yPos; y += tickSpacing) {
+			ctx.beginPath(); ctx.moveTo(ox - tickSize, y); ctx.lineTo(ox + tickSize, y); ctx.stroke();
+		}
 	}
+}
 
-	// Y ticks
-	for (let y = oy - yLen + tickSpacing; y < oy + yLen; y += tickSpacing) {
-		if (Math.abs(y - oy) < tickSpacing / 2) continue;
-		ctx.beginPath();
-		ctx.moveTo(ox - tickSize, y);
-		ctx.lineTo(ox + tickSize, y);
-		ctx.stroke();
-	}
+function drawArrowhead(ctx, tipX, tipY, angle, len, spread) {
+	ctx.beginPath();
+	ctx.moveTo(tipX, tipY);
+	ctx.lineTo(tipX - len * Math.cos(angle - spread), tipY - len * Math.sin(angle - spread));
+	ctx.moveTo(tipX, tipY);
+	ctx.lineTo(tipX - len * Math.cos(angle + spread), tipY - len * Math.sin(angle + spread));
+	ctx.stroke();
 }
 
 export function createDefaultAxes(worldX, worldY) {
@@ -69,10 +67,12 @@ export function createDefaultAxes(worldX, worldY) {
 		fill: 'none',
 		shape: {
 			type: 'axes',
-			ox: worldX,
-			oy: worldY,
-			xLen: 120,
-			yLen: 120
+			ox: worldX, oy: worldY,
+			xPosLen: 120, xNegLen: 120,
+			yPosLen: 120, yNegLen: 120,
+			showTicks: true,
+			// Legacy compat
+			xLen: 120, yLen: 120
 		},
 		points: [
 			{ x: worldX - 120, y: worldY },
@@ -85,20 +85,17 @@ export function createDefaultAxes(worldX, worldY) {
 
 export function isPointNearAxes(pos, obj, threshold = 15) {
 	if (!obj.shape) return false;
-	const { ox, oy, xLen, yLen } = obj.shape;
+	const s = obj.shape;
+	const { ox, oy } = s;
+	const xPos = s.xPosLen || s.xLen || 120;
+	const xNeg = s.xNegLen || s.xLen || 120;
+	const yPos = s.yPosLen || s.yLen || 120;
+	const yNeg = s.yNegLen || s.yLen || 120;
 	const half = threshold + obj.width / 2;
 
-	// Check X axis
 	if (pos.y >= oy - half && pos.y <= oy + half &&
-		pos.x >= ox - xLen - half && pos.x <= ox + xLen + half) {
-		return true;
-	}
-
-	// Check Y axis
+		pos.x >= ox - xNeg - half && pos.x <= ox + xPos + half) return true;
 	if (pos.x >= ox - half && pos.x <= ox + half &&
-		pos.y >= oy - yLen - half && pos.y <= oy + yLen + half) {
-		return true;
-	}
-
+		pos.y >= oy - yNeg - half && pos.y <= oy + yPos + half) return true;
 	return false;
 }

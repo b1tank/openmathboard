@@ -160,11 +160,16 @@ export function getStrokeBounds(stroke) {
 					minX: Math.min(s.x1, s.x2), minY: Math.min(s.y1, s.y2),
 					maxX: Math.max(s.x1, s.x2), maxY: Math.max(s.y1, s.y2)
 				};
-			case 'axes':
+			case 'axes': {
+				const xPos = s.xPosLen || s.xLen || 120;
+				const xNeg = s.xNegLen || s.xLen || 120;
+				const yPos = s.yPosLen || s.yLen || 120;
+				const yNeg = s.yNegLen || s.yLen || 120;
 				return {
-					minX: s.ox - s.xLen, minY: s.oy - s.yLen,
-					maxX: s.ox + s.xLen, maxY: s.oy + s.yLen
+					minX: s.ox - xNeg, minY: s.oy - yNeg,
+					maxX: s.ox + xPos, maxY: s.oy + yPos
 				};
+			}
 			case 'parabola': {
 				// Compute actual y range from parametric
 				const yVertex = s.k;
@@ -211,8 +216,10 @@ export function isPointNearStroke(pos, stroke, threshold = 15) {
 				return Math.abs(norm - 1) * Math.min(s.rx, s.ry) < half;
 			}
 			case 'axes': {
-				if (pos.y >= s.oy - half && pos.y <= s.oy + half && pos.x >= s.ox - s.xLen - half && pos.x <= s.ox + s.xLen + half) return true;
-				if (pos.x >= s.ox - half && pos.x <= s.ox + half && pos.y >= s.oy - s.yLen - half && pos.y <= s.oy + s.yLen + half) return true;
+				const xP = s.xPosLen || s.xLen || 120, xN = s.xNegLen || s.xLen || 120;
+				const yP = s.yPosLen || s.yLen || 120, yN = s.yNegLen || s.yLen || 120;
+				if (pos.y >= s.oy - half && pos.y <= s.oy + half && pos.x >= s.ox - xN - half && pos.x <= s.ox + xP + half) return true;
+				if (pos.x >= s.ox - half && pos.x <= s.ox + half && pos.y >= s.oy - yN - half && pos.y <= s.oy + yP + half) return true;
 				return false;
 			}
 		}

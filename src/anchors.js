@@ -54,12 +54,20 @@ export function getAnchors(obj) {
 				{ id: 'p1', x: obj.shape.x1, y: obj.shape.y1, type: 'endpoint' },
 				{ id: 'p2', x: obj.shape.x2, y: obj.shape.y2, type: 'endpoint' },
 			];
-		case 'axes':
+		case 'axes': {
+			const s = obj.shape;
+			const xPos = s.xPosLen || s.xLen || 120;
+			const xNeg = s.xNegLen || s.xLen || 120;
+			const yPos = s.yPosLen || s.yLen || 120;
+			const yNeg = s.yNegLen || s.yLen || 120;
 			return [
-				{ id: 'origin', x: obj.shape.ox, y: obj.shape.oy, type: 'center' },
-				{ id: 'xEnd', x: obj.shape.ox + obj.shape.xLen, y: obj.shape.oy, type: 'scale' },
-				{ id: 'yEnd', x: obj.shape.ox, y: obj.shape.oy - obj.shape.yLen, type: 'scale' },
+				{ id: 'origin', x: s.ox, y: s.oy, type: 'center' },
+				{ id: 'xPosEnd', x: s.ox + xPos, y: s.oy, type: 'scale' },
+				{ id: 'xNegEnd', x: s.ox - xNeg, y: s.oy, type: 'scale' },
+				{ id: 'yNegEnd', x: s.ox, y: s.oy - yNeg, type: 'scale' },   // up
+				{ id: 'yPosEnd', x: s.ox, y: s.oy + yPos, type: 'scale' },   // down
 			];
+		}
 		default:
 			return [];
 	}
@@ -137,8 +145,10 @@ export function onAnchorDrag(obj, anchorId, newWorldPos) {
 			break;
 		case 'axes':
 			if (anchorId === 'origin') { obj.shape.ox = newWorldPos.x; obj.shape.oy = newWorldPos.y; }
-			if (anchorId === 'xEnd') { obj.shape.xLen = newWorldPos.x - obj.shape.ox; }
-			if (anchorId === 'yEnd') { obj.shape.yLen = obj.shape.oy - newWorldPos.y; }
+			if (anchorId === 'xPosEnd') { obj.shape.xPosLen = Math.max(20, newWorldPos.x - obj.shape.ox); }
+			if (anchorId === 'xNegEnd') { obj.shape.xNegLen = Math.max(20, obj.shape.ox - newWorldPos.x); }
+			if (anchorId === 'yNegEnd') { obj.shape.yNegLen = Math.max(20, obj.shape.oy - newWorldPos.y); }
+			if (anchorId === 'yPosEnd') { obj.shape.yPosLen = Math.max(20, newWorldPos.y - obj.shape.oy); }
 			break;
 	}
 }
