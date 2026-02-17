@@ -104,8 +104,8 @@ export function onAnchorDrag(obj, anchorId, newWorldPos) {
 			break;
 		case 'ellipse':
 			if (anchorId === 'center') { obj.shape.cx = newWorldPos.x; obj.shape.cy = newWorldPos.y; }
-			if (anchorId === 'rx') { obj.shape.rx = Math.abs(newWorldPos.x - obj.shape.cx); }
-			if (anchorId === 'ry') { obj.shape.ry = Math.abs(newWorldPos.y - obj.shape.cy); }
+			if (anchorId === 'rx') { obj.shape.rx = Math.max(5, Math.abs(newWorldPos.x - obj.shape.cx)); }
+			if (anchorId === 'ry') { obj.shape.ry = Math.max(5, Math.abs(newWorldPos.y - obj.shape.cy)); }
 			break;
 		case 'parabola':
 			if (anchorId === 'vertex') { obj.shape.h = newWorldPos.x; obj.shape.k = newWorldPos.y; }
