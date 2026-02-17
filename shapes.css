@@ -37,12 +37,13 @@
   position: fixed;
   z-index: 200;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 8px;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  padding: 10px;
   display: none;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 160px;
 }
 
 .property-panel.show {
@@ -51,36 +52,60 @@
 
 .prop-colors {
   display: flex;
-  gap: 4px;
+  gap: 6px;
+  justify-content: center;
 }
 
 .prop-colors button {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
   border-radius: 50%;
-  border: 2px solid transparent;
+  border: 2px solid rgba(0, 0, 0, 0.08);
   cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+  padding: 0;
+}
+
+.prop-colors button:hover {
+  transform: scale(1.15);
 }
 
 .prop-colors button.active {
   border-color: #374151;
+  box-shadow: 0 0 0 2px white, 0 0 0 3.5px #374151;
+}
+
+/* Width + Dash row */
+.prop-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.prop-divider {
+  width: 1px;
+  height: 20px;
+  background: #e5e7eb;
+  margin: 0 2px;
 }
 
 .prop-widths {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .prop-widths button {
-  flex: 1;
-  height: 28px;
+  width: 36px;
+  height: 26px;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
 }
 
 .prop-widths button:hover {
@@ -91,41 +116,57 @@
   background: #e5e7eb;
 }
 
+.prop-widths .stroke-preview {
+  width: 22px;
+  background: #374151;
+  border-radius: 1px;
+}
+
 .prop-dash {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .prop-dash button {
-  flex: 1;
-  height: 28px;
+  width: 36px;
+  height: 26px;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  padding: 0;
 }
 
 .prop-dash button:hover {
   background: #f3f4f6;
+  color: #374151;
 }
 
 .prop-dash button.active {
   background: #e5e7eb;
+  color: #111827;
 }
 
 .prop-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  background: #fee2e2;
-  color: #dc2626;
-  border-radius: 6px;
-  padding: 6px;
+  background: transparent;
+  color: #9ca3af;
+  border-radius: 5px;
+  padding: 5px;
   cursor: pointer;
-  font-size: 14px;
+  transition: background 0.12s, color 0.12s;
 }
 
 .prop-delete:hover {
-  background: #fecaca;
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 /* Shape palette */

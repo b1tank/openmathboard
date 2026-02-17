@@ -359,23 +359,34 @@
   <!-- Property Panel (floating, appears on selection) -->
   <div class="property-panel" id="propertyPanel">
     <div class="prop-colors">
-      <button class="prop-color" data-color="#000000" style="background: #000000"></button>
-      <button class="prop-color" data-color="#2563eb" style="background: #2563eb"></button>
-      <button class="prop-color" data-color="#dc2626" style="background: #dc2626"></button>
-      <button class="prop-color" data-color="#16a34a" style="background: #16a34a"></button>
-      <button class="prop-color" data-color="#9333ea" style="background: #9333ea"></button>
-      <button class="prop-color" data-color="#ea580c" style="background: #ea580c"></button>
+      <button class="prop-color" data-color="#000000" style="background: #000000" title="Black"></button>
+      <button class="prop-color" data-color="#2563eb" style="background: #2563eb" title="Blue"></button>
+      <button class="prop-color" data-color="#dc2626" style="background: #dc2626" title="Red"></button>
+      <button class="prop-color" data-color="#16a34a" style="background: #16a34a" title="Green"></button>
+      <button class="prop-color" data-color="#9333ea" style="background: #9333ea" title="Purple"></button>
+      <button class="prop-color" data-color="#ea580c" style="background: #ea580c" title="Orange"></button>
     </div>
-    <div class="prop-widths">
-      <button class="prop-width" data-width="2"><span class="stroke-preview" style="height: 2px"></span></button>
-      <button class="prop-width" data-width="4"><span class="stroke-preview" style="height: 4px"></span></button>
-      <button class="prop-width" data-width="8"><span class="stroke-preview" style="height: 8px"></span></button>
+    <div class="prop-row">
+      <div class="prop-widths">
+        <button class="prop-width" data-width="2" title="Thin"><span class="stroke-preview" style="height: 1.5px"></span></button>
+        <button class="prop-width" data-width="4" title="Medium"><span class="stroke-preview" style="height: 3px"></span></button>
+        <button class="prop-width" data-width="8" title="Thick"><span class="stroke-preview" style="height: 5px"></span></button>
+      </div>
+      <span class="prop-divider"></span>
+      <div class="prop-dash">
+        <button class="prop-dash-solid" data-dash="false" title="Solid">
+          <svg width="24" height="10" viewBox="0 0 24 10"><line x1="2" y1="5" x2="22" y2="5" stroke="currentColor" stroke-width="2"/></svg>
+        </button>
+        <button class="prop-dash-dashed" data-dash="true" title="Dashed">
+          <svg width="24" height="10" viewBox="0 0 24 10"><line x1="2" y1="5" x2="22" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/></svg>
+        </button>
+      </div>
     </div>
-    <div class="prop-dash">
-      <button class="prop-dash-solid" data-dash="false">━━━</button>
-      <button class="prop-dash-dashed" data-dash="true">╌╌╌</button>
-    </div>
-    <button class="prop-delete" id="propDeleteBtn">🗑️</button>
+    <button class="prop-delete" id="propDeleteBtn" title="Delete">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+      </svg>
+    </button>
   </div>
 
   <!-- Conversion Popup (appears after freehand stroke) -->
