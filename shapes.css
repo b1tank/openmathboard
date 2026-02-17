@@ -1,0 +1,200 @@
+/* OpenMathBoard — Shape-specific styles */
+/* Conversion popup, property panel, anchor handles, shape palette */
+
+/* Conversion popup */
+.conversion-popup {
+  position: fixed;
+  z-index: 200;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 6px;
+  display: none;
+  gap: 4px;
+}
+
+.conversion-popup.show {
+  display: flex;
+}
+
+.conversion-popup button {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.conversion-popup button:hover {
+  background: #f3f4f6;
+}
+
+/* Property panel */
+.property-panel {
+  position: fixed;
+  z-index: 200;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.property-panel.show {
+  display: flex;
+}
+
+.prop-colors {
+  display: flex;
+  gap: 4px;
+}
+
+.prop-colors button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.prop-colors button.active {
+  border-color: #374151;
+}
+
+.prop-widths {
+  display: flex;
+  gap: 4px;
+}
+
+.prop-widths button {
+  flex: 1;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prop-widths button:hover {
+  background: #f3f4f6;
+}
+
+.prop-widths button.active {
+  background: #e5e7eb;
+}
+
+.prop-dash {
+  display: flex;
+  gap: 4px;
+}
+
+.prop-dash button {
+  flex: 1;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.prop-dash button:hover {
+  background: #f3f4f6;
+}
+
+.prop-dash button.active {
+  background: #e5e7eb;
+}
+
+.prop-delete {
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.prop-delete:hover {
+  background: #fecaca;
+}
+
+/* Shape palette */
+.shape-palette {
+  position: fixed;
+  right: 0;
+  top: var(--toolbar-height);
+  bottom: 0;
+  width: 200px;
+  background: white;
+  border-left: 1px solid #e5e7eb;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 90;
+  padding: 12px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.shape-palette.show {
+  display: flex;
+}
+
+.shape-palette-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.shape-palette-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.shape-palette-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.shape-palette-item:hover {
+  background: #f9fafb;
+  border-color: #2563eb;
+}
+
+.shape-palette-item svg {
+  width: 32px;
+  height: 32px;
+  color: #374151;
+}
+
+/* Grid overlay */
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}

@@ -10,3 +10,4 @@ infra/*.json
 .vscode/
 *.swp
 *.swo
+app.js.bak
