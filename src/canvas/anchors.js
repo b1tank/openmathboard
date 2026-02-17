@@ -110,14 +110,10 @@ export function onAnchorDrag(obj, anchorId, newWorldPos) {
 		case 'parabola':
 			if (anchorId === 'vertex') { obj.shape.h = newWorldPos.x; obj.shape.k = newWorldPos.y; }
 			if (anchorId === 'left') {
-				obj.shape.xMin = newWorldPos.x;
-				const dx = obj.shape.xMin - obj.shape.h;
-				if (Math.abs(dx) > 1) obj.shape.a = (newWorldPos.y - obj.shape.k) / (dx * dx);
+				obj.shape.xMin = Math.min(newWorldPos.x, obj.shape.h - 5);
 			}
 			if (anchorId === 'right') {
-				obj.shape.xMax = newWorldPos.x;
-				const dx = obj.shape.xMax - obj.shape.h;
-				if (Math.abs(dx) > 1) obj.shape.a = (newWorldPos.y - obj.shape.k) / (dx * dx);
+				obj.shape.xMax = Math.max(newWorldPos.x, obj.shape.h + 5);
 			}
 			break;
 		case 'sine':
