@@ -156,7 +156,16 @@ function drawSelectionHighlights(ctx, strokes, selectedStrokes, camera) {
 		const sh = (bounds.maxY - bounds.minY) * camera.zoom;
 		const padding = 6;
 
+		const rotation = (stroke.shape && stroke.shape.rotation) || 0;
+		const centerSx = sx + sw / 2;
+		const centerSy = sy + sh / 2;
+
 		ctx.save();
+		if (rotation !== 0) {
+			ctx.translate(centerSx, centerSy);
+			ctx.rotate(rotation);
+			ctx.translate(-centerSx, -centerSy);
+		}
 		ctx.strokeStyle = '#2563eb';
 		ctx.lineWidth = 2;
 		ctx.setLineDash([4, 4]);

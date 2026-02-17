@@ -135,12 +135,25 @@ function onPointerDown(e) {
 		if (selected.length > 0) {
 			const PADDING = 6; // must match renderer padding
 			const insideBounds = selected.some(idx => {
-				const bounds = getStrokeBounds(strokes[idx]);
+				const stroke = strokes[idx];
+				const bounds = getStrokeBounds(stroke);
 				if (!bounds) return false;
-				return pos.x >= bounds.minX - PADDING / camera.zoom &&
-				       pos.x <= bounds.maxX + PADDING / camera.zoom &&
-				       pos.y >= bounds.minY - PADDING / camera.zoom &&
-				       pos.y <= bounds.maxY + PADDING / camera.zoom;
+				// Inverse-rotate point if shape is rotated
+				let testX = pos.x, testY = pos.y;
+				const rotation = (stroke.shape && stroke.shape.rotation) || 0;
+				if (rotation !== 0) {
+					const cx = (bounds.minX + bounds.maxX) / 2;
+					const cy = (bounds.minY + bounds.maxY) / 2;
+					const cos = Math.cos(-rotation);
+					const sin = Math.sin(-rotation);
+					const dx = pos.x - cx, dy = pos.y - cy;
+					testX = cx + dx * cos - dy * sin;
+					testY = cy + dx * sin + dy * cos;
+				}
+				return testX >= bounds.minX - PADDING / camera.zoom &&
+				       testX <= bounds.maxX + PADDING / camera.zoom &&
+				       testY >= bounds.minY - PADDING / camera.zoom &&
+				       testY <= bounds.maxY + PADDING / camera.zoom;
 			});
 			if (insideBounds) {
 				setIsDraggingSelection(true);

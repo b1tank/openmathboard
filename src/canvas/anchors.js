@@ -7,6 +7,17 @@ const ANCHOR_SIZE = 12;
 const HIT_THRESHOLD = 28; // screen pixels — large for touch targets
 const ROTATION_HANDLE_OFFSET = 40; // pixels above top of bounding box (screen space)
 
+/**
+ * Rotate point (x, y) around center (cx, cy) by angle (radians).
+ */
+function rotatePoint(x, y, cx, cy, angle) {
+	const cos = Math.cos(angle);
+	const sin = Math.sin(angle);
+	const dx = x - cx;
+	const dy = y - cy;
+	return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+}
+
 // ============ Get anchors for any shape type ============
 
 /**
@@ -417,15 +428,31 @@ export function renderAnchors(ctx, obj, camera) {
 	const anchors = getAnchors(obj, camera);
 	if (anchors.length === 0) return;
 
-	// Draw rotation handle line (from top-center of bounds to rotation anchor)
+	const rotation = (obj.shape && obj.shape.rotation) || 0;
 	const bounds = getStrokeBounds(obj);
+
+	// Compute rotation center (screen space)
+	let rotCenterSx = 0, rotCenterSy = 0;
 	if (bounds) {
-		const topCenterX = ((bounds.minX + bounds.maxX) / 2 - camera.x) * camera.zoom;
-		const topCenterY = (bounds.minY - camera.y) * camera.zoom - 6; // 6 = padding
+		rotCenterSx = ((bounds.minX + bounds.maxX) / 2 - camera.x) * camera.zoom;
+		rotCenterSy = ((bounds.minY + bounds.maxY) / 2 - camera.y) * camera.zoom;
+	}
+
+	// Draw rotation handle line (from top-center of bounds to rotation anchor)
+	if (bounds) {
+		let topCenterX = ((bounds.minX + bounds.maxX) / 2 - camera.x) * camera.zoom;
+		let topCenterY = (bounds.minY - camera.y) * camera.zoom - 6; // 6 = padding
 		const rotAnchor = anchors.find(a => a.id === 'rotation');
 		if (rotAnchor) {
-			const rx = (rotAnchor.x - camera.x) * camera.zoom;
-			const ry = (rotAnchor.y - camera.y) * camera.zoom;
+			let rx = (rotAnchor.x - camera.x) * camera.zoom;
+			let ry = (rotAnchor.y - camera.y) * camera.zoom;
+			// Rotate line endpoints
+			if (rotation !== 0) {
+				const p1 = rotatePoint(topCenterX, topCenterY, rotCenterSx, rotCenterSy, rotation);
+				const p2 = rotatePoint(rx, ry, rotCenterSx, rotCenterSy, rotation);
+				topCenterX = p1.x; topCenterY = p1.y;
+				rx = p2.x; ry = p2.y;
+			}
 			ctx.save();
 			ctx.beginPath();
 			ctx.moveTo(topCenterX, topCenterY);
@@ -439,8 +466,13 @@ export function renderAnchors(ctx, obj, camera) {
 	}
 
 	for (const anchor of anchors) {
-		const sx = (anchor.x - camera.x) * camera.zoom;
-		const sy = (anchor.y - camera.y) * camera.zoom;
+		let sx = (anchor.x - camera.x) * camera.zoom;
+		let sy = (anchor.y - camera.y) * camera.zoom;
+		// Rotate anchor screen position around shape center
+		if (rotation !== 0 && bounds) {
+			const rp = rotatePoint(sx, sy, rotCenterSx, rotCenterSy, rotation);
+			sx = rp.x; sy = rp.y;
+		}
 		const size = ANCHOR_SIZE;
 
 		ctx.save();
@@ -499,31 +531,42 @@ export function renderAnchors(ctx, obj, camera) {
 				ctx.lineWidth = 1.5;
 				ctx.strokeRect(-size / 3, -size / 3, size * 2 / 3, size * 2 / 3);
 				break;
-			case 'rotation': // Circular rotation icon (orange)
+			case 'rotation': { // Circular arrow rotation icon (orange)
+				const r = size * 0.55;
+				// Outer circle background
 				ctx.beginPath();
-				ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+				ctx.arc(0, 0, r, 0, Math.PI * 2);
 				ctx.fillStyle = 'white';
 				ctx.fill();
 				ctx.strokeStyle = '#ea580c';
-				ctx.lineWidth = 2;
-				ctx.stroke();
-				// Rotation arrow icon
-				ctx.beginPath();
-				ctx.arc(0, 0, size / 3, -Math.PI * 0.8, Math.PI * 0.5);
-				ctx.strokeStyle = '#ea580c';
 				ctx.lineWidth = 1.5;
 				ctx.stroke();
-				// Arrowhead on arc
-				const tipAngle = Math.PI * 0.5;
-				const tipX = (size / 3) * Math.cos(tipAngle);
-				const tipY = (size / 3) * Math.sin(tipAngle);
+				// Circular arrow arc (270° sweep)
+				const arcR = r * 0.55;
+				const arcStart = -Math.PI * 0.75;
+				const arcEnd = Math.PI * 0.65;
 				ctx.beginPath();
-				ctx.moveTo(tipX, tipY);
-				ctx.lineTo(tipX + 3, tipY - 3);
-				ctx.moveTo(tipX, tipY);
-				ctx.lineTo(tipX - 3, tipY - 2);
+				ctx.arc(0, 0, arcR, arcStart, arcEnd);
+				ctx.strokeStyle = '#ea580c';
+				ctx.lineWidth = 1.5;
+				ctx.lineCap = 'round';
 				ctx.stroke();
+				// Arrowhead at arc end
+				const ax = arcR * Math.cos(arcEnd);
+				const ay = arcR * Math.sin(arcEnd);
+				// Tangent direction at arc end (perpendicular to radius, clockwise)
+				const tx = -Math.sin(arcEnd);
+				const ty = Math.cos(arcEnd);
+				const hl = 3.5; // arrowhead length
+				ctx.beginPath();
+				ctx.moveTo(ax, ay);
+				ctx.lineTo(ax - hl * tx - hl * 0.5 * ty, ay - hl * ty + hl * 0.5 * tx);
+				ctx.moveTo(ax, ay);
+				ctx.lineTo(ax - hl * tx + hl * 0.5 * ty, ay - hl * ty - hl * 0.5 * tx);
+				ctx.stroke();
+				ctx.lineCap = 'butt';
 				break;
+			}
 		}
 
 		ctx.restore();
@@ -534,11 +577,27 @@ export function renderAnchors(ctx, obj, camera) {
 
 export function findAnchorAtPoint(obj, worldPos, camera) {
 	const anchors = getAnchors(obj, camera);
+	const rotation = (obj.shape && obj.shape.rotation) || 0;
+	const bounds = getStrokeBounds(obj);
+
+	// Screen-space rotation center
+	let rotCx = 0, rotCy = 0;
+	if (bounds) {
+		rotCx = ((bounds.minX + bounds.maxX) / 2 - camera.x) * camera.zoom;
+		rotCy = ((bounds.minY + bounds.maxY) / 2 - camera.y) * camera.zoom;
+	}
+
+	const px = (worldPos.x - camera.x) * camera.zoom;
+	const py = (worldPos.y - camera.y) * camera.zoom;
+
 	for (const anchor of anchors) {
-		const sx = (anchor.x - camera.x) * camera.zoom;
-		const sy = (anchor.y - camera.y) * camera.zoom;
-		const px = (worldPos.x - camera.x) * camera.zoom;
-		const py = (worldPos.y - camera.y) * camera.zoom;
+		let sx = (anchor.x - camera.x) * camera.zoom;
+		let sy = (anchor.y - camera.y) * camera.zoom;
+		// Rotate anchor position to match visual position
+		if (rotation !== 0 && bounds) {
+			const rp = rotatePoint(sx, sy, rotCx, rotCy, rotation);
+			sx = rp.x; sy = rp.y;
+		}
 		const dist = Math.hypot(px - sx, py - sy);
 		if (dist < HIT_THRESHOLD) {
 			return anchor;
