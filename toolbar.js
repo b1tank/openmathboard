@@ -9,6 +9,7 @@ import { t } from './lib/i18n.js';
 import { showToast } from './toast.js';
 import { setLanguage, applyTranslations } from './lib/i18n.js';
 import { toggleShapePalette } from './palette.js';
+import { toggleGrid, toggleAxesOverlay } from './grid.js';
 
 export function setupToolbarListeners() {
 	const refs = getDomRefs();
@@ -66,6 +67,17 @@ export function setupToolbarListeners() {
 		shapePaletteBtn.addEventListener('click', () => {
 			toggleShapePalette();
 			shapePaletteBtn.classList.toggle('active');
+		});
+	}
+
+	// Grid toggle
+	const gridBtn = document.getElementById('gridBtn');
+	if (gridBtn) {
+		gridBtn.addEventListener('click', () => {
+			const on = toggleGrid();
+			gridBtn.classList.toggle('active', on);
+			// Trigger redraw via dynamic import to avoid circular dep
+			import('./renderer.js').then(m => m.redrawCanvas());
 		});
 	}
 

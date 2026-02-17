@@ -18,6 +18,7 @@ import { setupWheelZoom, setupPinchZoom, setupSpacebarPan } from './camera.js';
 import { initPropertyPanel } from './property-panel.js';
 import { initConversionPopup } from './conversion.js';
 import { initShapePalette } from './palette.js';
+import { loadState, scheduleSave } from './persistence.js';
 
 // ============ Initialize i18n ============
 initI18n({
@@ -111,6 +112,12 @@ function init() {
 
 	// Initial state
 	setTool(TOOLS.PEN);
+
+	// Load saved state, then save initial history
+	const loaded = loadState();
+	if (loaded) {
+		redrawCanvas();
+	}
 	saveToHistory();
 }
 

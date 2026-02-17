@@ -13,6 +13,7 @@ import { renderArrow } from './shapes/arrow.js';
 import { renderAxes } from './shapes/axes.js';
 import { renderAnchors } from './anchors.js';
 import { pointToSegmentDistance, pointToPolylineDistance, getBounds } from './detection.js';
+import { renderGridOverlay } from './grid.js';
 
 // Shape renderer registry
 const RENDERERS = {
@@ -25,6 +26,11 @@ const RENDERERS = {
 	arrow: renderArrow,
 	axes: renderAxes,
 };
+
+// Dirty flag for performance
+let dirty = true;
+
+export function markDirty() { dirty = true; }
 
 // ============ Main render ============
 
@@ -41,6 +47,9 @@ export function redrawCanvas() {
 	ctx.save();
 	ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
 	ctx.scale(camera.zoom, camera.zoom);
+
+	// Grid overlay (behind strokes)
+	renderGridOverlay(ctx, camera, rect);
 
 	// Draw all strokes
 	for (let i = 0; i < strokes.length; i++) {

@@ -7,6 +7,7 @@ import {
 	getDomRefs
 } from './state.js';
 import { redrawCanvas } from './renderer.js';
+import { scheduleSave } from './persistence.js';
 
 export function saveToHistory() {
 	const stack = getHistoryStack();
@@ -23,6 +24,7 @@ export function saveToHistory() {
 	setHistoryStack(trimmed);
 	setHistoryIndex(trimmed.length - 1);
 	updateHistoryButtons();
+	scheduleSave();
 }
 
 export function undo() {
