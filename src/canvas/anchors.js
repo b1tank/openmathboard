@@ -1,6 +1,18 @@
 // OpenMathBoard — Anchor system (rendering, hit testing, drag handling)
+//
+// Anchor design per shape:
+//   Circle:     radius (E) + rotation
+//   Ellipse:    rx-east, rx-west, ry-north, ry-south + rotation
+//   Line:       p1, p2 + rotation
+//   Arrow:      p1, p2 + rotation
+//   Parabola:   vertex, left, right + rotation
+//   Sine/Cos:   left, right, peak, valley, period + rotation
+//   Axes:       4 arm endpoints + rotation
+//   Numberline: left, right + rotation
+//   Axes3d:     xEnd, yEnd, zEnd + rotation
+//   Freehand:   stretch-n/s/e/w + rotation
+
 import { getCamera } from '../core/state.js';
-import { worldToScreen } from './camera.js';
 import { getStrokeBounds } from './renderer.js';
 
 const ANCHOR_SIZE = 12;
@@ -18,20 +30,41 @@ function rotatePoint(x, y, cx, cy, angle) {
 	return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
 }
 
-// ============ Get anchors for any shape type ============
+// ============ Rotation anchor helper ============
+
+function getRotationAnchor(obj, camera) {
+	const bounds = getStrokeBounds(obj);
+	if (!bounds) return null;
+	const cx = (bounds.minX + bounds.maxX) / 2;
+	const rotOffset = ROTATION_HANDLE_OFFSET / camera.zoom;
+	return { id: 'rotation', x: cx, y: bounds.minY - rotOffset, type: 'rotation' };
+}
+
+// ============ Get all anchors for a stroke ============
+
+export function getAnchors(obj, camera) {
+	if (!obj) return [];
+	const cam = camera || getCamera();
+
+	// Freehand strokes (no shape) get stretch anchors
+	if (!obj.shape) {
+		return getFreehandAnchors(obj, cam);
+	}
+
+	const special = getShapeAnchors(obj);
+	const rot = getRotationAnchor(obj, cam);
+	return rot ? [...special, rot] : special;
+}
 
 /**
- * Returns general bounding-box anchors (stretch N/S/E/W + rotation).
- * These apply to ALL shapes. Returns world-coordinate anchors.
+ * Freehand: 4 bounding-box stretch handles + rotation.
  */
-export function getGeneralAnchors(obj, camera) {
+function getFreehandAnchors(obj, camera) {
 	const bounds = getStrokeBounds(obj);
 	if (!bounds) return [];
-
 	const cx = (bounds.minX + bounds.maxX) / 2;
 	const cy = (bounds.minY + bounds.maxY) / 2;
 	const rotOffset = ROTATION_HANDLE_OFFSET / camera.zoom;
-
 	return [
 		{ id: 'stretch-n', x: cx, y: bounds.minY, type: 'stretch' },
 		{ id: 'stretch-s', x: cx, y: bounds.maxY, type: 'stretch' },
@@ -41,111 +74,79 @@ export function getGeneralAnchors(obj, camera) {
 	];
 }
 
-// ============ Get anchors for any shape type ============
-
-export function getAnchors(obj, camera) {
-	if (!obj) return [];
-	const cam = camera || getCamera();
-	const special = getSpecialAnchors(obj);
-	const general = getGeneralAnchors(obj, cam);
-
-	// Filter out general anchors that overlap with special anchors.
-	// This prevents visual clutter and ambiguous hit targets (e.g.
-	// ellipse rx overlaps stretch-e, sine peak overlaps stretch-n).
-	const OVERLAP_THRESHOLD = 20; // world units — anchors closer than this are considered overlapping
-	const filtered = general.filter(ga => {
-		// Rotation anchor is never filtered out
-		if (ga.id === 'rotation') return true;
-		return !special.some(sa => {
-			const dx = ga.x - sa.x;
-			const dy = ga.y - sa.y;
-			return (dx * dx + dy * dy) < OVERLAP_THRESHOLD * OVERLAP_THRESHOLD;
-		});
-	});
-
-	return [...special, ...filtered];
-}
-
 /**
- * Shape-specific anchors (endpoints, centers, curve handles, etc.)
+ * Shape-specific anchors — tailored per shape for best UX.
  */
-export function getSpecialAnchors(obj) {
-	if (!obj || !obj.shape) return [];
-
-	switch (obj.shape.type) {
+function getShapeAnchors(obj) {
+	const s = obj.shape;
+	switch (s.type) {
 		case 'line':
 			return [
-				{ id: 'p1', x: obj.shape.x1, y: obj.shape.y1, type: 'endpoint' },
-				{ id: 'p2', x: obj.shape.x2, y: obj.shape.y2, type: 'endpoint' },
+				{ id: 'p1', x: s.x1, y: s.y1, type: 'endpoint' },
+				{ id: 'p2', x: s.x2, y: s.y2, type: 'endpoint' },
+			];
+		case 'arrow':
+			return [
+				{ id: 'p1', x: s.x1, y: s.y1, type: 'endpoint' },
+				{ id: 'p2', x: s.x2, y: s.y2, type: 'endpoint' },
 			];
 		case 'circle':
 			return [
-				{ id: 'center', x: obj.shape.cx, y: obj.shape.cy, type: 'center' },
-				{ id: 'radius', x: obj.shape.cx + obj.shape.r, y: obj.shape.cy, type: 'scale' },
+				{ id: 'radius', x: s.cx + s.r, y: s.cy, type: 'scale' },
 			];
 		case 'ellipse':
 			return [
-				{ id: 'center', x: obj.shape.cx, y: obj.shape.cy, type: 'center' },
-				{ id: 'rx', x: obj.shape.cx + obj.shape.rx, y: obj.shape.cy, type: 'scale' },
-				{ id: 'ry', x: obj.shape.cx, y: obj.shape.cy - obj.shape.ry, type: 'scale' },
+				{ id: 'rx-east',  x: s.cx + s.rx, y: s.cy, type: 'scale' },
+				{ id: 'rx-west',  x: s.cx - s.rx, y: s.cy, type: 'scale' },
+				{ id: 'ry-north', x: s.cx, y: s.cy - s.ry, type: 'scale' },
+				{ id: 'ry-south', x: s.cx, y: s.cy + s.ry, type: 'scale' },
 			];
 		case 'parabola':
 			return [
-				{ id: 'vertex', x: obj.shape.h, y: obj.shape.k, type: 'curve' },
-				{ id: 'left', x: obj.shape.xMin, y: obj.shape.a * (obj.shape.xMin - obj.shape.h) ** 2 + obj.shape.k, type: 'endpoint' },
-				{ id: 'right', x: obj.shape.xMax, y: obj.shape.a * (obj.shape.xMax - obj.shape.h) ** 2 + obj.shape.k, type: 'endpoint' },
+				{ id: 'vertex', x: s.h, y: s.k, type: 'curve' },
+				{ id: 'left',  x: s.xMin, y: s.a * (s.xMin - s.h) ** 2 + s.k, type: 'endpoint' },
+				{ id: 'right', x: s.xMax, y: s.a * (s.xMax - s.h) ** 2 + s.k, type: 'endpoint' },
 			];
 		case 'sine':
 		case 'cosine': {
-			const s = obj.shape;
 			const midX = (s.xMin + s.xMax) / 2;
 			const period = (2 * Math.PI) / Math.abs(s.B || 0.01);
-			// periodEnd: one period to the right of center, on midline
 			const periodEndX = midX + period;
 			return [
-				{ id: 'center', x: midX, y: s.D, type: 'center' },          // move whole shape
-				{ id: 'left', x: s.xMin, y: s.D, type: 'endpoint' },        // extend left (more periods)
-				{ id: 'right', x: s.xMax, y: s.D, type: 'endpoint' },       // extend right (more periods)
-				{ id: 'peak', x: midX, y: s.D - s.A, type: 'curve' },       // amplitude (drag up/down)
-				{ id: 'valley', x: midX, y: s.D + s.A, type: 'curve' },     // amplitude (drag up/down, symmetric)
-				{ id: 'period', x: Math.min(periodEndX, s.xMax), y: s.D, type: 'scale' }, // frequency/period control
+				{ id: 'left',   x: s.xMin, y: s.D, type: 'endpoint' },
+				{ id: 'right',  x: s.xMax, y: s.D, type: 'endpoint' },
+				{ id: 'peak',   x: midX, y: s.D - s.A, type: 'curve' },
+				{ id: 'valley', x: midX, y: s.D + s.A, type: 'curve' },
+				{ id: 'period', x: Math.min(periodEndX, s.xMax), y: s.D, type: 'scale' },
 			];
 		}
-		case 'arrow':
-			return [
-				{ id: 'p1', x: obj.shape.x1, y: obj.shape.y1, type: 'endpoint' },
-				{ id: 'p2', x: obj.shape.x2, y: obj.shape.y2, type: 'endpoint' },
-			];
 		case 'axes': {
-			const s = obj.shape;
 			const xPos = s.xPosLen || s.xLen || 120;
 			const xNeg = s.xNegLen || s.xLen || 120;
 			const yPos = s.yPosLen || s.yLen || 120;
 			const yNeg = s.yNegLen || s.yLen || 120;
 			return [
-				{ id: 'origin', x: s.ox, y: s.oy, type: 'center' },
 				{ id: 'xPosEnd', x: s.ox + xPos, y: s.oy, type: 'scale' },
 				{ id: 'xNegEnd', x: s.ox - xNeg, y: s.oy, type: 'scale' },
-				{ id: 'yNegEnd', x: s.ox, y: s.oy - yNeg, type: 'scale' },   // up
-				{ id: 'yPosEnd', x: s.ox, y: s.oy + yPos, type: 'scale' },   // down
+				{ id: 'yNegEnd', x: s.ox, y: s.oy - yNeg, type: 'scale' },
+				{ id: 'yPosEnd', x: s.ox, y: s.oy + yPos, type: 'scale' },
 			];
-		}		case 'numberline':
+		}
+		case 'numberline':
 			return [
-				{ id: 'center', x: obj.shape.ox, y: obj.shape.oy, type: 'center' },
-				{ id: 'left', x: obj.shape.ox - obj.shape.leftLen, y: obj.shape.oy, type: 'endpoint' },
-				{ id: 'right', x: obj.shape.ox + obj.shape.rightLen, y: obj.shape.oy, type: 'endpoint' },
+				{ id: 'left',  x: s.ox - s.leftLen,  y: s.oy, type: 'endpoint' },
+				{ id: 'right', x: s.ox + s.rightLen, y: s.oy, type: 'endpoint' },
 			];
 		case 'axes3d': {
-			const s3 = obj.shape;
 			const cosZ = Math.cos(Math.PI - Math.PI / 6);
 			const sinZ = Math.sin(Math.PI - Math.PI / 6);
 			return [
-				{ id: 'origin', x: s3.ox, y: s3.oy, type: 'center' },
-				{ id: 'xEnd', x: s3.ox + s3.xLen, y: s3.oy, type: 'scale' },
-				{ id: 'yEnd', x: s3.ox, y: s3.oy - s3.yLen, type: 'scale' },
-				{ id: 'zEnd', x: s3.ox + s3.zLen * cosZ, y: s3.oy - s3.zLen * sinZ, type: 'scale' },
+				{ id: 'xEnd', x: s.ox + s.xLen, y: s.oy, type: 'scale' },
+				{ id: 'yEnd', x: s.ox, y: s.oy - s.yLen, type: 'scale' },
+				{ id: 'zEnd', x: s.ox + s.zLen * cosZ, y: s.oy - s.zLen * sinZ, type: 'scale' },
 			];
-		}		default:
+		}
+		default:
 			return [];
 	}
 }
@@ -155,155 +156,119 @@ export function getSpecialAnchors(obj) {
 export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 	if (!obj) return;
 
-	// General anchors (stretch / rotation)
-	if (anchorId.startsWith('stretch-') || anchorId === 'rotation') {
-		onGeneralAnchorDrag(obj, anchorId, newWorldPos);
+	// Rotation (any shape including freehand)
+	if (anchorId === 'rotation') {
+		const bounds = getStrokeBounds(obj);
+		if (!bounds) return;
+		const cx = (bounds.minX + bounds.maxX) / 2;
+		const cy = (bounds.minY + bounds.maxY) / 2;
+		const angle = Math.atan2(newWorldPos.y - cy, newWorldPos.x - cx) + Math.PI / 2;
+		const snap = Math.PI / 12;
+		const snapped = Math.round(angle / snap) * snap;
+		if (obj.shape) {
+			obj.shape.rotation = Math.abs(angle - snapped) < 0.05 ? snapped : angle;
+		}
+		return;
+	}
+
+	// Freehand stretch
+	if (anchorId.startsWith('stretch-')) {
+		onFreehandStretch(obj, anchorId, newWorldPos);
 		return;
 	}
 
 	if (!obj.shape) return;
+	const s = obj.shape;
 
-	switch (obj.shape.type) {
+	switch (s.type) {
 		case 'line':
-			if (anchorId === 'p1') { obj.shape.x1 = newWorldPos.x; obj.shape.y1 = newWorldPos.y; }
-			if (anchorId === 'p2') { obj.shape.x2 = newWorldPos.x; obj.shape.y2 = newWorldPos.y; }
+			if (anchorId === 'p1') { s.x1 = newWorldPos.x; s.y1 = newWorldPos.y; }
+			if (anchorId === 'p2') { s.x2 = newWorldPos.x; s.y2 = newWorldPos.y; }
+			break;
+		case 'arrow':
+			if (anchorId === 'p1') { s.x1 = newWorldPos.x; s.y1 = newWorldPos.y; }
+			if (anchorId === 'p2') { s.x2 = newWorldPos.x; s.y2 = newWorldPos.y; }
 			break;
 		case 'circle':
-			if (anchorId === 'center') { obj.shape.cx = newWorldPos.x; obj.shape.cy = newWorldPos.y; }
-			if (anchorId === 'radius') { obj.shape.r = Math.hypot(newWorldPos.x - obj.shape.cx, newWorldPos.y - obj.shape.cy); }
+			if (anchorId === 'radius') {
+				s.r = Math.max(5, Math.hypot(newWorldPos.x - s.cx, newWorldPos.y - s.cy));
+			}
 			break;
 		case 'ellipse':
-			if (anchorId === 'center') { obj.shape.cx = newWorldPos.x; obj.shape.cy = newWorldPos.y; }
-			if (anchorId === 'rx') { obj.shape.rx = Math.max(5, Math.abs(newWorldPos.x - obj.shape.cx)); }
-			if (anchorId === 'ry') { obj.shape.ry = Math.max(5, Math.abs(newWorldPos.y - obj.shape.cy)); }
+			if (anchorId === 'rx-east' || anchorId === 'rx-west') {
+				s.rx = Math.max(5, Math.abs(newWorldPos.x - s.cx));
+			}
+			if (anchorId === 'ry-north' || anchorId === 'ry-south') {
+				s.ry = Math.max(5, Math.abs(newWorldPos.y - s.cy));
+			}
 			break;
 		case 'parabola':
 			if (anchorId === 'vertex') {
-				// Move vertex with both endpoint x-positions fixed.
-				// Recalculate 'a' so the curve passes through the saved endpoint y-values.
-				const newH = Math.max(obj.shape.xMin + 1, Math.min(obj.shape.xMax - 1, newWorldPos.x));
-				const newK = newWorldPos.y;
-				obj.shape.h = newH;
-				obj.shape.k = newK;
-				// Solve for 'a' using saved endpoint y-values from drag start
+				const newH = Math.max(s.xMin + 1, Math.min(s.xMax - 1, newWorldPos.x));
+				s.h = newH;
+				s.k = newWorldPos.y;
 				if (dragInfo && dragInfo.savedEndpointYLeft !== undefined) {
-					const dxL = obj.shape.xMin - newH;
-					const dxR = obj.shape.xMax - newH;
+					const dxL = s.xMin - newH;
+					const dxR = s.xMax - newH;
 					const yL = dragInfo.savedEndpointYLeft;
 					const yR = dragInfo.savedEndpointYRight;
-					// Use the farther endpoint for numerical stability
 					if (Math.abs(dxL) >= Math.abs(dxR) && dxL * dxL > 1) {
-						obj.shape.a = (yL - newK) / (dxL * dxL);
+						s.a = (yL - s.k) / (dxL * dxL);
 					} else if (dxR * dxR > 1) {
-						obj.shape.a = (yR - newK) / (dxR * dxR);
+						s.a = (yR - s.k) / (dxR * dxR);
 					}
-					// Naturally flips peak↔valley:
-					// vertex below endpoints → a > 0 (valley)
-					// vertex above endpoints → a < 0 (peak)
 				}
 			}
-			if (anchorId === 'left') {
-				obj.shape.xMin = Math.min(newWorldPos.x, obj.shape.h - 5);
-			}
-			if (anchorId === 'right') {
-				obj.shape.xMax = Math.max(newWorldPos.x, obj.shape.h + 5);
-			}
-			// Regenerate points for hit testing
+			if (anchorId === 'left') { s.xMin = Math.min(newWorldPos.x, s.h - 5); }
+			if (anchorId === 'right') { s.xMax = Math.max(newWorldPos.x, s.h + 5); }
 			regenerateParabolaPoints(obj);
 			break;
 		case 'sine':
 		case 'cosine': {
-			const s = obj.shape;
 			const midX = (s.xMin + s.xMax) / 2;
-			const halfSpan = (s.xMax - s.xMin) / 2;
-			if (anchorId === 'center') {
-				// Move entire wave
-				const dx = newWorldPos.x - midX;
-				const dy = newWorldPos.y - s.D;
-				s.C += dx; s.D += dy;
-				s.xMin += dx; s.xMax += dx;
-			}
-			if (anchorId === 'left') {
-				s.xMin = Math.min(newWorldPos.x, s.xMax - 20);
-			}
-			if (anchorId === 'right') {
-				s.xMax = Math.max(newWorldPos.x, s.xMin + 20);
-			}
-			if (anchorId === 'peak') {
-				// Amplitude: distance from midline to peak
-				s.A = Math.max(5, s.D - newWorldPos.y);
-			}
-			if (anchorId === 'valley') {
-				// Amplitude from valley side
-				s.A = Math.max(5, newWorldPos.y - s.D);
-			}
+			if (anchorId === 'left')  { s.xMin = Math.min(newWorldPos.x, s.xMax - 20); }
+			if (anchorId === 'right') { s.xMax = Math.max(newWorldPos.x, s.xMin + 20); }
+			if (anchorId === 'peak')  { s.A = Math.max(5, s.D - newWorldPos.y); }
+			if (anchorId === 'valley') { s.A = Math.max(5, newWorldPos.y - s.D); }
 			if (anchorId === 'period') {
-				// Period control: distance from center to this handle = one period
 				const dist = Math.abs(newWorldPos.x - midX);
-				const newPeriod = Math.max(20, dist);
-				s.B = (2 * Math.PI) / newPeriod;
+				s.B = (2 * Math.PI) / Math.max(20, dist);
 			}
 			break;
 		}
-		case 'arrow':
-			if (anchorId === 'p1') { obj.shape.x1 = newWorldPos.x; obj.shape.y1 = newWorldPos.y; }
-			if (anchorId === 'p2') { obj.shape.x2 = newWorldPos.x; obj.shape.y2 = newWorldPos.y; }
-			break;
 		case 'axes':
-			if (anchorId === 'origin') { obj.shape.ox = newWorldPos.x; obj.shape.oy = newWorldPos.y; }
-			if (anchorId === 'xPosEnd') { obj.shape.xPosLen = Math.max(20, newWorldPos.x - obj.shape.ox); }
-			if (anchorId === 'xNegEnd') { obj.shape.xNegLen = Math.max(20, obj.shape.ox - newWorldPos.x); }
-			if (anchorId === 'yNegEnd') { obj.shape.yNegLen = Math.max(20, obj.shape.oy - newWorldPos.y); }
-			if (anchorId === 'yPosEnd') { obj.shape.yPosLen = Math.max(20, newWorldPos.y - obj.shape.oy); }
+			if (anchorId === 'xPosEnd') { s.xPosLen = Math.max(20, newWorldPos.x - s.ox); }
+			if (anchorId === 'xNegEnd') { s.xNegLen = Math.max(20, s.ox - newWorldPos.x); }
+			if (anchorId === 'yNegEnd') { s.yNegLen = Math.max(20, s.oy - newWorldPos.y); }
+			if (anchorId === 'yPosEnd') { s.yPosLen = Math.max(20, newWorldPos.y - s.oy); }
 			break;
 		case 'numberline':
-			if (anchorId === 'center') { obj.shape.ox = newWorldPos.x; obj.shape.oy = newWorldPos.y; }
-			if (anchorId === 'left') { obj.shape.leftLen = Math.max(20, obj.shape.ox - newWorldPos.x); }
-			if (anchorId === 'right') { obj.shape.rightLen = Math.max(20, newWorldPos.x - obj.shape.ox); }
+			if (anchorId === 'left')  { s.leftLen  = Math.max(20, s.ox - newWorldPos.x); }
+			if (anchorId === 'right') { s.rightLen = Math.max(20, newWorldPos.x - s.ox); }
 			break;
 		case 'axes3d': {
-			const s3 = obj.shape;
-			if (anchorId === 'origin') { s3.ox = newWorldPos.x; s3.oy = newWorldPos.y; }
-			if (anchorId === 'xEnd') { s3.xLen = Math.max(20, newWorldPos.x - s3.ox); }
-			if (anchorId === 'yEnd') { s3.yLen = Math.max(20, s3.oy - newWorldPos.y); }
+			if (anchorId === 'xEnd') { s.xLen = Math.max(20, newWorldPos.x - s.ox); }
+			if (anchorId === 'yEnd') { s.yLen = Math.max(20, s.oy - newWorldPos.y); }
 			if (anchorId === 'zEnd') {
-				// Distance from origin to point along z direction
 				const cosZ = Math.cos(Math.PI - Math.PI / 6);
 				const sinZ = Math.sin(Math.PI - Math.PI / 6);
-				const dx = newWorldPos.x - s3.ox, dy = newWorldPos.y - s3.oy;
-				s3.zLen = Math.max(20, (dx * cosZ - dy * sinZ));
+				const dx = newWorldPos.x - s.ox, dy = newWorldPos.y - s.oy;
+				s.zLen = Math.max(20, (dx * cosZ - dy * sinZ));
 			}
 			break;
 		}
 	}
 }
 
-// ============ General anchor drag (stretch + rotation) ============
+// ============ Freehand stretch ============
 
-function onGeneralAnchorDrag(obj, anchorId, newWorldPos) {
+function onFreehandStretch(obj, anchorId, newWorldPos) {
 	const bounds = getStrokeBounds(obj);
 	if (!bounds) return;
-
 	const cx = (bounds.minX + bounds.maxX) / 2;
 	const cy = (bounds.minY + bounds.maxY) / 2;
 	const w = bounds.maxX - bounds.minX;
 	const h = bounds.maxY - bounds.minY;
-
-	if (anchorId === 'rotation') {
-		// Compute angle from center to pointer
-		const angle = Math.atan2(newWorldPos.y - cy, newWorldPos.x - cx) + Math.PI / 2;
-		// Snap to 15-degree increments if close
-		const snap = Math.PI / 12;
-		const snapped = Math.round(angle / snap) * snap;
-		const finalAngle = Math.abs(angle - snapped) < 0.05 ? snapped : angle;
-		
-		if (obj.shape) {
-			obj.shape.rotation = finalAngle;
-		}
-		return;
-	}
-
-	// Stretch: scale shape geometry from bounding box
 	if (w < 1 || h < 1) return;
 
 	let scaleX = 1, scaleY = 1;
@@ -312,127 +277,35 @@ function onGeneralAnchorDrag(obj, anchorId, newWorldPos) {
 	switch (anchorId) {
 		case 'stretch-n': {
 			const newMinY = Math.min(newWorldPos.y, bounds.maxY - 5);
-			const newH = bounds.maxY - newMinY;
-			scaleY = newH / h;
+			scaleY = (bounds.maxY - newMinY) / h;
 			newCy = (newMinY + bounds.maxY) / 2;
 			break;
 		}
 		case 'stretch-s': {
 			const newMaxY = Math.max(newWorldPos.y, bounds.minY + 5);
-			const newH = newMaxY - bounds.minY;
-			scaleY = newH / h;
+			scaleY = (newMaxY - bounds.minY) / h;
 			newCy = (bounds.minY + newMaxY) / 2;
 			break;
 		}
 		case 'stretch-e': {
 			const newMaxX = Math.max(newWorldPos.x, bounds.minX + 5);
-			const newW = newMaxX - bounds.minX;
-			scaleX = newW / w;
+			scaleX = (newMaxX - bounds.minX) / w;
 			newCx = (bounds.minX + newMaxX) / 2;
 			break;
 		}
 		case 'stretch-w': {
 			const newMinX = Math.min(newWorldPos.x, bounds.maxX - 5);
-			const newW = bounds.maxX - newMinX;
-			scaleX = newW / w;
+			scaleX = (bounds.maxX - newMinX) / w;
 			newCx = (newMinX + bounds.maxX) / 2;
 			break;
 		}
 	}
 
-	// Apply scale to shape
-	scaleShape(obj, cx, cy, newCx, newCy, scaleX, scaleY);
-}
-
-/**
- * Scale a shape's geometry around (oldCx, oldCy), then translate center to (newCx, newCy).
- */
-function scaleShape(obj, oldCx, oldCy, newCx, newCy, scaleX, scaleY) {
-	function transformPt(x, y) {
-		return {
-			x: (x - oldCx) * scaleX + newCx,
-			y: (y - oldCy) * scaleY + newCy
-		};
-	}
-
-	if (obj.shape) {
-		const s = obj.shape;
-		switch (s.type) {
-			case 'circle': {
-				const c = transformPt(s.cx, s.cy);
-				s.cx = c.x; s.cy = c.y;
-				s.r = s.r * Math.max(scaleX, scaleY);
-				break;
-			}
-			case 'ellipse': {
-				const c = transformPt(s.cx, s.cy);
-				s.cx = c.x; s.cy = c.y;
-				s.rx = s.rx * scaleX; s.ry = s.ry * scaleY;
-				break;
-			}
-			case 'line':
-			case 'arrow': {
-				const p1 = transformPt(s.x1, s.y1);
-				const p2 = transformPt(s.x2, s.y2);
-				s.x1 = p1.x; s.y1 = p1.y;
-				s.x2 = p2.x; s.y2 = p2.y;
-				break;
-			}
-			case 'parabola': {
-				const v = transformPt(s.h, s.k);
-				const lx = transformPt(s.xMin, 0);
-				const rx = transformPt(s.xMax, 0);
-				s.h = v.x; s.k = v.y;
-				s.xMin = lx.x; s.xMax = rx.x;
-				// Adjust 'a' to preserve visual shape under scale
-				if (scaleX !== 0) s.a = s.a * (scaleY / scaleX);
-				break;
-			}
-			case 'sine':
-			case 'cosine': {
-				const c = transformPt((s.xMin + s.xMax) / 2, s.D);
-				const lx = transformPt(s.xMin, 0);
-				const rx = transformPt(s.xMax, 0);
-				s.C = c.x; s.D = c.y;
-				s.xMin = lx.x; s.xMax = rx.x;
-				s.A = s.A * scaleY;
-				if (scaleX !== 1) s.B = s.B / scaleX;
-				break;
-			}
-			case 'axes': {
-				const o = transformPt(s.ox, s.oy);
-				s.ox = o.x; s.oy = o.y;
-				const xPos = s.xPosLen || s.xLen || 120;
-				const xNeg = s.xNegLen || s.xLen || 120;
-				const yPos = s.yPosLen || s.yLen || 120;
-				const yNeg = s.yNegLen || s.yLen || 120;
-				s.xPosLen = xPos * scaleX; s.xNegLen = xNeg * scaleX;
-				s.yPosLen = yPos * scaleY; s.yNegLen = yNeg * scaleY;
-				break;
-			}
-			case 'numberline': {
-				const o = transformPt(s.ox, s.oy);
-				s.ox = o.x; s.oy = o.y;
-				s.leftLen = s.leftLen * scaleX;
-				s.rightLen = s.rightLen * scaleX;
-				break;
-			}
-			case 'axes3d': {
-				const o = transformPt(s.ox, s.oy);
-				s.ox = o.x; s.oy = o.y;
-				s.xLen = s.xLen * scaleX;
-				s.yLen = s.yLen * scaleY;
-				s.zLen = s.zLen * Math.max(scaleX, scaleY);
-				break;
-			}
-		}
-	}
-
-	// Scale all points
+	// Scale all freehand points
 	if (obj.points) {
 		for (const pt of obj.points) {
-			const t = { x: (pt.x - oldCx) * scaleX + newCx, y: (pt.y - oldCy) * scaleY + newCy };
-			pt.x = t.x; pt.y = t.y;
+			pt.x = (pt.x - cx) * scaleX + newCx;
+			pt.y = (pt.y - cy) * scaleY + newCy;
 		}
 	}
 }
@@ -456,12 +329,11 @@ export function renderAnchors(ctx, obj, camera) {
 	// Draw rotation handle line (from top-center of bounds to rotation anchor)
 	if (bounds) {
 		let topCenterX = ((bounds.minX + bounds.maxX) / 2 - camera.x) * camera.zoom;
-		let topCenterY = (bounds.minY - camera.y) * camera.zoom - 6; // 6 = padding
+		let topCenterY = (bounds.minY - camera.y) * camera.zoom - 6;
 		const rotAnchor = anchors.find(a => a.id === 'rotation');
 		if (rotAnchor) {
 			let rx = (rotAnchor.x - camera.x) * camera.zoom;
 			let ry = (rotAnchor.y - camera.y) * camera.zoom;
-			// Rotate line endpoints
 			if (rotation !== 0) {
 				const p1 = rotatePoint(topCenterX, topCenterY, rotCenterSx, rotCenterSy, rotation);
 				const p2 = rotatePoint(rx, ry, rotCenterSx, rotCenterSy, rotation);
@@ -483,7 +355,6 @@ export function renderAnchors(ctx, obj, camera) {
 	for (const anchor of anchors) {
 		let sx = (anchor.x - camera.x) * camera.zoom;
 		let sy = (anchor.y - camera.y) * camera.zoom;
-		// Rotate anchor screen position around shape center
 		if (rotation !== 0 && bounds) {
 			const rp = rotatePoint(sx, sy, rotCenterSx, rotCenterSy, rotation);
 			sx = rp.x; sy = rp.y;
@@ -494,7 +365,7 @@ export function renderAnchors(ctx, obj, camera) {
 		ctx.translate(sx, sy);
 
 		switch (anchor.type) {
-			case 'endpoint': // Circle
+			case 'endpoint': // Circle — for draggable endpoints
 				ctx.beginPath();
 				ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
 				ctx.fillStyle = 'white';
@@ -503,30 +374,14 @@ export function renderAnchors(ctx, obj, camera) {
 				ctx.lineWidth = 2;
 				ctx.stroke();
 				break;
-			case 'center': // Crosshair circle
-				ctx.beginPath();
-				ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
-				ctx.fillStyle = 'white';
-				ctx.fill();
-				ctx.strokeStyle = '#2563eb';
-				ctx.lineWidth = 2;
-				ctx.stroke();
-				// Crosshair
-				ctx.beginPath();
-				ctx.moveTo(-size / 2, 0); ctx.lineTo(size / 2, 0);
-				ctx.moveTo(0, -size / 2); ctx.lineTo(0, size / 2);
-				ctx.strokeStyle = '#2563eb';
-				ctx.lineWidth = 1;
-				ctx.stroke();
-				break;
-			case 'scale': // Square
+			case 'scale': // Square — for resize/scale handles
 				ctx.fillStyle = 'white';
 				ctx.fillRect(-size / 2, -size / 2, size, size);
 				ctx.strokeStyle = '#2563eb';
 				ctx.lineWidth = 2;
 				ctx.strokeRect(-size / 2, -size / 2, size, size);
 				break;
-			case 'curve': // Diamond
+			case 'curve': // Diamond — for curve/curvature control
 				ctx.beginPath();
 				ctx.moveTo(0, -size / 2);
 				ctx.lineTo(size / 2, 0);
@@ -539,16 +394,15 @@ export function renderAnchors(ctx, obj, camera) {
 				ctx.lineWidth = 2;
 				ctx.stroke();
 				break;
-			case 'stretch': // Small outlined square (green)
+			case 'stretch': // Small green square — freehand only
 				ctx.fillStyle = 'white';
 				ctx.fillRect(-size / 3, -size / 3, size * 2 / 3, size * 2 / 3);
 				ctx.strokeStyle = '#16a34a';
 				ctx.lineWidth = 1.5;
 				ctx.strokeRect(-size / 3, -size / 3, size * 2 / 3, size * 2 / 3);
 				break;
-			case 'rotation': { // Circular arrow rotation icon (orange)
+			case 'rotation': { // Circular arrow — rotation handle
 				const r = size * 0.55;
-				// Outer circle background
 				ctx.beginPath();
 				ctx.arc(0, 0, r, 0, Math.PI * 2);
 				ctx.fillStyle = 'white';
@@ -556,7 +410,6 @@ export function renderAnchors(ctx, obj, camera) {
 				ctx.strokeStyle = '#ea580c';
 				ctx.lineWidth = 1.5;
 				ctx.stroke();
-				// Circular arrow arc (270° sweep)
 				const arcR = r * 0.55;
 				const arcStart = -Math.PI * 0.75;
 				const arcEnd = Math.PI * 0.65;
@@ -566,13 +419,11 @@ export function renderAnchors(ctx, obj, camera) {
 				ctx.lineWidth = 1.5;
 				ctx.lineCap = 'round';
 				ctx.stroke();
-				// Arrowhead at arc end
 				const ax = arcR * Math.cos(arcEnd);
 				const ay = arcR * Math.sin(arcEnd);
-				// Tangent direction at arc end (perpendicular to radius, clockwise)
 				const tx = -Math.sin(arcEnd);
 				const ty = Math.cos(arcEnd);
-				const hl = 3.5; // arrowhead length
+				const hl = 3.5;
 				ctx.beginPath();
 				ctx.moveTo(ax, ay);
 				ctx.lineTo(ax - hl * tx - hl * 0.5 * ty, ay - hl * ty + hl * 0.5 * tx);
@@ -595,7 +446,6 @@ export function findAnchorAtPoint(obj, worldPos, camera) {
 	const rotation = (obj.shape && obj.shape.rotation) || 0;
 	const bounds = getStrokeBounds(obj);
 
-	// Screen-space rotation center
 	let rotCx = 0, rotCy = 0;
 	if (bounds) {
 		rotCx = ((bounds.minX + bounds.maxX) / 2 - camera.x) * camera.zoom;
@@ -608,20 +458,18 @@ export function findAnchorAtPoint(obj, worldPos, camera) {
 	for (const anchor of anchors) {
 		let sx = (anchor.x - camera.x) * camera.zoom;
 		let sy = (anchor.y - camera.y) * camera.zoom;
-		// Rotate anchor position to match visual position
 		if (rotation !== 0 && bounds) {
 			const rp = rotatePoint(sx, sy, rotCx, rotCy, rotation);
 			sx = rp.x; sy = rp.y;
 		}
-		const dist = Math.hypot(px - sx, py - sy);
-		if (dist < HIT_THRESHOLD) {
+		if (Math.hypot(px - sx, py - sy) < HIT_THRESHOLD) {
 			return anchor;
 		}
 	}
 	return null;
 }
 
-// ============ Point regeneration helpers ============
+// ============ Helpers ============
 
 function regenerateParabolaPoints(obj) {
 	if (!obj.shape) return;
