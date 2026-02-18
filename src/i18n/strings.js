@@ -113,10 +113,6 @@ export const TRANSLATIONS = {
 		// Shape palette
 		shapePalette: 'Shapes',
 
-		// Grid
-		gridToggle: 'Toggle Grid',
-		axesToggle: 'Toggle Axes',
-
 		// Dash toggle
 		dashToggle: 'Dash Style',
 	},
@@ -231,10 +227,6 @@ export const TRANSLATIONS = {
 
 		// Shape palette
 		shapePalette: '形状',
-
-		// Grid
-		gridToggle: '切换网格',
-		axesToggle: '切换坐标轴',
 
 		// Dash toggle
 		dashToggle: '线条样式',

@@ -9,7 +9,7 @@ import { t } from '../i18n/i18n.js';
 import { showToast } from './toast.js';
 import { setLanguage, applyTranslations } from '../i18n/i18n.js';
 import { toggleShapePalette } from './palette.js';
-import { toggleGrid, toggleAxesOverlay } from '../canvas/grid.js';
+
 
 export function setupToolbarListeners() {
 	const refs = getDomRefs();
@@ -71,17 +71,6 @@ export function setupToolbarListeners() {
 		});
 	}
 
-	// Grid toggle
-	const gridBtn = document.getElementById('gridBtn');
-	if (gridBtn) {
-		gridBtn.addEventListener('click', () => {
-			const on = toggleGrid();
-			gridBtn.classList.toggle('active', on);
-			// Trigger redraw via dynamic import to avoid circular dep
-			import('../canvas/renderer.js').then(m => m.redrawCanvas());
-		});
-	}
-
 	// Close dropdowns
 	document.addEventListener('click', (e) => {
 		const target = e.target;
@@ -128,13 +117,6 @@ export function setupToolbarListeners() {
 					case 'clear': clearCanvas(); break;
 					case 'copy': copyToClipboard(); break;
 					case 'save': saveImage(); break;
-					case 'grid': {
-						const on = toggleGrid();
-						const gridBtn = document.getElementById('gridBtn');
-						if (gridBtn) gridBtn.classList.toggle('active', on);
-						import('../canvas/renderer.js').then(m => m.redrawCanvas());
-						break;
-					}
 					case 'lang-en':
 					case 'lang-zh': {
 						const lang = action === 'lang-en' ? 'en' : 'zh';

@@ -15,7 +15,6 @@ import { renderNumberline } from '../shapes/numberline.js';
 import { renderAxes3d } from '../shapes/axes3d.js';
 import { renderAnchors } from './anchors.js';
 import { pointToSegmentDistance, pointToPolylineDistance, getBounds } from '../interaction/detection.js';
-import { renderGridOverlay } from './grid.js';
 
 // Shape renderer registry
 const RENDERERS = {
@@ -51,9 +50,6 @@ export function redrawCanvas() {
 	ctx.save();
 	ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
 	ctx.scale(camera.zoom, camera.zoom);
-
-	// Grid overlay (behind strokes)
-	renderGridOverlay(ctx, camera, rect);
 
 	// Draw all strokes
 	for (let i = 0; i < strokes.length; i++) {
