@@ -148,4 +148,6 @@ function resizeCanvas() {
 }
 
 // ============ Start ============
-document.addEventListener('DOMContentLoaded', init);
+// <script type="module"> is deferred by spec — the DOM is always
+// fully parsed by the time module code executes. No event listener needed.
+init();
