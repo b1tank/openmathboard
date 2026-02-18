@@ -69,6 +69,8 @@ function init() {
 		colorDropdownMobile: document.getElementById('colorDropdownMobile'),
 		strokeBtnMobile: document.getElementById('strokeBtnMobile'),
 		strokeDropdownMobile: document.getElementById('strokeDropdownMobile'),
+		dashBtnMobile: document.getElementById('dashBtnMobile'),
+		shapePaletteBtnMobile: document.getElementById('shapePaletteBtnMobile'),
 	};
 	setDomRefs(refs);
 

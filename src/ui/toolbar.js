@@ -53,35 +53,21 @@ export function setupToolbarListeners() {
 		});
 	});
 
-	// Dash toggle
+	// Dash toggle (desktop)
 	const dashBtn = document.getElementById('dashBtn');
 	if (dashBtn) {
 		dashBtn.addEventListener('click', () => {
 			setDash(!getCurrentDash());
 		});
 	}
-	const dashBtnMobile = document.getElementById('dashBtnMobile');
-	if (dashBtnMobile) {
-		dashBtnMobile.addEventListener('click', () => {
-			setDash(!getCurrentDash());
-		});
-	}
 
-	// Shape Palette toggle
+	// Shape Palette toggle (desktop)
 	const shapePaletteBtn = document.getElementById('shapePaletteBtn');
-	const shapePaletteBtnMobile = document.getElementById('shapePaletteBtnMobile');
 	if (shapePaletteBtn) {
 		shapePaletteBtn.addEventListener('click', () => {
 			toggleShapePalette();
 			shapePaletteBtn.classList.toggle('active');
-			if (shapePaletteBtnMobile) shapePaletteBtnMobile.classList.toggle('active', shapePaletteBtn.classList.contains('active'));
-		});
-	}
-	if (shapePaletteBtnMobile) {
-		shapePaletteBtnMobile.addEventListener('click', () => {
-			toggleShapePalette();
-			shapePaletteBtnMobile.classList.toggle('active');
-			if (shapePaletteBtn) shapePaletteBtn.classList.toggle('active', shapePaletteBtnMobile.classList.contains('active'));
+			if (refs.shapePaletteBtnMobile) refs.shapePaletteBtnMobile.classList.toggle('active', shapePaletteBtn.classList.contains('active'));
 		});
 	}
 
@@ -142,6 +128,26 @@ export function setupToolbarListeners() {
 					case 'clear': clearCanvas(); break;
 					case 'copy': copyToClipboard(); break;
 					case 'save': saveImage(); break;
+					case 'grid': {
+						const on = toggleGrid();
+						const gridBtn = document.getElementById('gridBtn');
+						if (gridBtn) gridBtn.classList.toggle('active', on);
+						import('../canvas/renderer.js').then(m => m.redrawCanvas());
+						break;
+					}
+					case 'dash': {
+						setDash(!getCurrentDash());
+						break;
+					}
+					case 'shapes': {
+						toggleShapePalette();
+						const spBtn = document.getElementById('shapePaletteBtn');
+						const spBtnM = refs.shapePaletteBtnMobile;
+						const isActive = document.querySelector('.shape-palette.show') !== null;
+						if (spBtn) spBtn.classList.toggle('active', isActive);
+						if (spBtnM) spBtnM.classList.toggle('active', isActive);
+						break;
+					}
 					case 'lang-en':
 					case 'lang-zh': {
 						const lang = action === 'lang-en' ? 'en' : 'zh';
@@ -219,6 +225,23 @@ function setupMobileToolbar() {
 				setStrokeWidth(parseInt(e.currentTarget.dataset.width));
 				refs.strokeDropdownMobile.classList.remove('show');
 			});
+		});
+	}
+
+	// Dash toggle (mobile) — wired here alongside other mobile buttons
+	if (refs.dashBtnMobile) {
+		refs.dashBtnMobile.addEventListener('click', () => {
+			setDash(!getCurrentDash());
+		});
+	}
+
+	// Shape Palette toggle (mobile) — wired here alongside other mobile buttons
+	if (refs.shapePaletteBtnMobile) {
+		const shapePaletteBtn = document.getElementById('shapePaletteBtn');
+		refs.shapePaletteBtnMobile.addEventListener('click', () => {
+			toggleShapePalette();
+			refs.shapePaletteBtnMobile.classList.toggle('active');
+			if (shapePaletteBtn) shapePaletteBtn.classList.toggle('active', refs.shapePaletteBtnMobile.classList.contains('active'));
 		});
 	}
 }
