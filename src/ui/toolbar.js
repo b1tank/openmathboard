@@ -135,19 +135,6 @@ export function setupToolbarListeners() {
 						import('../canvas/renderer.js').then(m => m.redrawCanvas());
 						break;
 					}
-					case 'dash': {
-						setDash(!getCurrentDash());
-						break;
-					}
-					case 'shapes': {
-						toggleShapePalette();
-						const spBtn = document.getElementById('shapePaletteBtn');
-						const spBtnM = refs.shapePaletteBtnMobile;
-						const isActive = document.querySelector('.shape-palette.show') !== null;
-						if (spBtn) spBtn.classList.toggle('active', isActive);
-						if (spBtnM) spBtnM.classList.toggle('active', isActive);
-						break;
-					}
 					case 'lang-en':
 					case 'lang-zh': {
 						const lang = action === 'lang-en' ? 'en' : 'zh';
@@ -230,19 +217,29 @@ function setupMobileToolbar() {
 
 	// Dash toggle (mobile) — wired here alongside other mobile buttons
 	if (refs.dashBtnMobile) {
-		refs.dashBtnMobile.addEventListener('click', () => {
+		const handler = (e) => {
+			e.preventDefault(); // Stop ghost clicks on iOS
+			e.stopPropagation();
 			setDash(!getCurrentDash());
-		});
+		};
+		// Use touchend for faster response on mobile, click as fallback
+		refs.dashBtnMobile.addEventListener('touchend', handler);
+		refs.dashBtnMobile.addEventListener('click', handler);
 	}
 
 	// Shape Palette toggle (mobile) — wired here alongside other mobile buttons
 	if (refs.shapePaletteBtnMobile) {
 		const shapePaletteBtn = document.getElementById('shapePaletteBtn');
-		refs.shapePaletteBtnMobile.addEventListener('click', () => {
+		const handler = (e) => {
+			e.preventDefault(); // Stop ghost clicks on iOS
+			e.stopPropagation();
 			toggleShapePalette();
 			refs.shapePaletteBtnMobile.classList.toggle('active');
-			if (shapePaletteBtn) shapePaletteBtn.classList.toggle('active', refs.shapePaletteBtnMobile.classList.contains('active'));
-		});
+			const isActive = refs.shapePaletteBtnMobile.classList.contains('active');
+			if (shapePaletteBtn) shapePaletteBtn.classList.toggle('active', isActive);
+		};
+		refs.shapePaletteBtnMobile.addEventListener('touchend', handler);
+		refs.shapePaletteBtnMobile.addEventListener('click', handler);
 	}
 }
 
