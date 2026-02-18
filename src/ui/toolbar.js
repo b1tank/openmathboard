@@ -60,13 +60,28 @@ export function setupToolbarListeners() {
 			setDash(!getCurrentDash());
 		});
 	}
+	const dashBtnMobile = document.getElementById('dashBtnMobile');
+	if (dashBtnMobile) {
+		dashBtnMobile.addEventListener('click', () => {
+			setDash(!getCurrentDash());
+		});
+	}
 
 	// Shape Palette toggle
 	const shapePaletteBtn = document.getElementById('shapePaletteBtn');
+	const shapePaletteBtnMobile = document.getElementById('shapePaletteBtnMobile');
 	if (shapePaletteBtn) {
 		shapePaletteBtn.addEventListener('click', () => {
 			toggleShapePalette();
 			shapePaletteBtn.classList.toggle('active');
+			if (shapePaletteBtnMobile) shapePaletteBtnMobile.classList.toggle('active', shapePaletteBtn.classList.contains('active'));
+		});
+	}
+	if (shapePaletteBtnMobile) {
+		shapePaletteBtnMobile.addEventListener('click', () => {
+			toggleShapePalette();
+			shapePaletteBtnMobile.classList.toggle('active');
+			if (shapePaletteBtn) shapePaletteBtn.classList.toggle('active', shapePaletteBtnMobile.classList.contains('active'));
 		});
 	}
 
