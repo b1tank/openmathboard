@@ -134,6 +134,12 @@ html, body {
   flex-shrink: 0;
 }
 
+/* Ensure iOS Safari treats taps as immediate clicks inside scrollable .mobile-tools */
+.mobile-tools .toolbar-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .mobile-tools .toolbar-divider {
   height: 24px;
   margin: 0 4px;

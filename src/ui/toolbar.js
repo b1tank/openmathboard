@@ -8,7 +8,7 @@ import { handleFileSelect } from './images.js';
 import { t } from '../i18n/i18n.js';
 import { showToast } from './toast.js';
 import { setLanguage, applyTranslations } from '../i18n/i18n.js';
-import { toggleShapePalette } from './palette.js';
+import { toggleShapePaletteWithUI } from './palette.js';
 
 
 export function setupToolbarListeners() {
@@ -64,11 +64,7 @@ export function setupToolbarListeners() {
 	// Shape Palette toggle (desktop)
 	const shapePaletteBtn = document.getElementById('shapePaletteBtn');
 	if (shapePaletteBtn) {
-		shapePaletteBtn.addEventListener('click', () => {
-			toggleShapePalette();
-			shapePaletteBtn.classList.toggle('active');
-			if (refs.shapePaletteBtnMobile) refs.shapePaletteBtnMobile.classList.toggle('active', shapePaletteBtn.classList.contains('active'));
-		});
+		shapePaletteBtn.addEventListener('click', () => toggleShapePaletteWithUI());
 	}
 
 	// Close dropdowns
@@ -197,32 +193,8 @@ function setupMobileToolbar() {
 		});
 	}
 
-	// Dash toggle (mobile) — wired here alongside other mobile buttons
-	if (refs.dashBtnMobile) {
-		const handler = (e) => {
-			e.preventDefault(); // Stop ghost clicks on iOS
-			e.stopPropagation();
-			setDash(!getCurrentDash());
-		};
-		// Use touchend for faster response on mobile, click as fallback
-		refs.dashBtnMobile.addEventListener('touchend', handler);
-		refs.dashBtnMobile.addEventListener('click', handler);
-	}
-
-	// Shape Palette toggle (mobile) — wired here alongside other mobile buttons
-	if (refs.shapePaletteBtnMobile) {
-		const shapePaletteBtn = document.getElementById('shapePaletteBtn');
-		const handler = (e) => {
-			e.preventDefault(); // Stop ghost clicks on iOS
-			e.stopPropagation();
-			toggleShapePalette();
-			refs.shapePaletteBtnMobile.classList.toggle('active');
-			const isActive = refs.shapePaletteBtnMobile.classList.contains('active');
-			if (shapePaletteBtn) shapePaletteBtn.classList.toggle('active', isActive);
-		};
-		refs.shapePaletteBtnMobile.addEventListener('touchend', handler);
-		refs.shapePaletteBtnMobile.addEventListener('click', handler);
-	}
+	if (refs.dashBtnMobile) refs.dashBtnMobile.addEventListener('click', () => setDash(!getCurrentDash()));
+	if (refs.shapePaletteBtnMobile) refs.shapePaletteBtnMobile.addEventListener('click', () => toggleShapePaletteWithUI());
 }
 
 function clearCanvas() {

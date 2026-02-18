@@ -60,8 +60,9 @@ export function setStrokeWidth(width) {
 export function setDash(dash) {
 	setCurrentDash(dash);
 
-	// Update active state on dash toggle buttons
-	document.querySelectorAll('.dash-toggle-btn').forEach(btn => {
-		btn.classList.toggle('active', dash);
-	});
+	// Update active state on dash toggle buttons (desktop + mobile via refs)
+	const refs = getDomRefs();
+	const dashBtn = document.getElementById('dashBtn');
+	if (dashBtn) dashBtn.classList.toggle('active', dash);
+	if (refs.dashBtnMobile) refs.dashBtnMobile.classList.toggle('active', dash);
 }

@@ -1,5 +1,5 @@
 // OpenMathBoard — Shape palette UI (toolbar drawer)
-import { getStrokes, getCamera, getCanvasRect } from '../core/state.js';
+import { getStrokes, getCamera, getCanvasRect, getDomRefs } from '../core/state.js';
 import { screenToWorld } from '../canvas/camera.js';
 import { createDefaultLine } from '../shapes/line.js';
 import { createDefaultCircle } from '../shapes/circle.js';
@@ -119,6 +119,19 @@ export function toggleShapePalette() {
 	if (paletteEl) {
 		paletteEl.classList.toggle('show', isOpen);
 	}
+}
+
+/**
+ * Toggle shape palette and sync all button active states (desktop + mobile).
+ * Mirrors the setTool / setDash pattern so callers are one-liners.
+ */
+export function toggleShapePaletteWithUI() {
+	toggleShapePalette();
+	const open = isOpen;
+	const refs = getDomRefs();
+	const desktopBtn = document.getElementById('shapePaletteBtn');
+	if (desktopBtn) desktopBtn.classList.toggle('active', open);
+	if (refs.shapePaletteBtnMobile) refs.shapePaletteBtnMobile.classList.toggle('active', open);
 }
 
 export function isShapePaletteOpen() {
