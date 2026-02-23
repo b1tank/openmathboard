@@ -21,12 +21,10 @@ export function renderAxes(ctx, obj) {
 	ctx.lineTo(ox, oy - yNeg);
 	ctx.stroke();
 
-	// Arrowheads
+	// Arrowheads (only on +x right and -y top)
 	const hl = 10, ha = Math.PI / 6;
-	drawArrowhead(ctx, ox + xPos, oy, 0, hl, ha);       // +x
-	drawArrowhead(ctx, ox - xNeg, oy, Math.PI, hl, ha);  // -x
+	drawArrowhead(ctx, ox + xPos, oy, 0, hl, ha);       // +x (right)
 	drawArrowhead(ctx, ox, oy - yNeg, -Math.PI / 2, hl, ha); // -y (up)
-	drawArrowhead(ctx, ox, oy + yPos, Math.PI / 2, hl, ha);  // +y (down)
 
 
 }
