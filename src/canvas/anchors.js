@@ -8,8 +8,6 @@
 //   Parabola:   vertex, left, right + rotation
 //   Sine/Cos:   left, right, peak, valley, period + rotation
 //   Axes:       4 arm endpoints + rotation
-//   Numberline: left, right + rotation
-//   Axes3d:     xEnd, yEnd, zEnd + rotation
 //   Freehand:   stretch-n/s/e/w + rotation
 
 import { getCamera } from '../core/state.js';
@@ -132,20 +130,6 @@ function getShapeAnchors(obj) {
 				{ id: 'yPosEnd', x: s.ox, y: s.oy + yPos, type: 'scale' },
 			];
 		}
-		case 'numberline':
-			return [
-				{ id: 'left',  x: s.ox - s.leftLen,  y: s.oy, type: 'endpoint' },
-				{ id: 'right', x: s.ox + s.rightLen, y: s.oy, type: 'endpoint' },
-			];
-		case 'axes3d': {
-			const cosZ = Math.cos(Math.PI - Math.PI / 6);
-			const sinZ = Math.sin(Math.PI - Math.PI / 6);
-			return [
-				{ id: 'xEnd', x: s.ox + s.xLen, y: s.oy, type: 'scale' },
-				{ id: 'yEnd', x: s.ox, y: s.oy - s.yLen, type: 'scale' },
-				{ id: 'zEnd', x: s.ox + s.zLen * cosZ, y: s.oy - s.zLen * sinZ, type: 'scale' },
-			];
-		}
 		default:
 			return [];
 	}
@@ -242,21 +226,7 @@ export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 			if (anchorId === 'yNegEnd') { s.yNegLen = Math.max(20, s.oy - newWorldPos.y); }
 			if (anchorId === 'yPosEnd') { s.yPosLen = Math.max(20, newWorldPos.y - s.oy); }
 			break;
-		case 'numberline':
-			if (anchorId === 'left')  { s.leftLen  = Math.max(20, s.ox - newWorldPos.x); }
-			if (anchorId === 'right') { s.rightLen = Math.max(20, newWorldPos.x - s.ox); }
-			break;
-		case 'axes3d': {
-			if (anchorId === 'xEnd') { s.xLen = Math.max(20, newWorldPos.x - s.ox); }
-			if (anchorId === 'yEnd') { s.yLen = Math.max(20, s.oy - newWorldPos.y); }
-			if (anchorId === 'zEnd') {
-				const cosZ = Math.cos(Math.PI - Math.PI / 6);
-				const sinZ = Math.sin(Math.PI - Math.PI / 6);
-				const dx = newWorldPos.x - s.ox, dy = newWorldPos.y - s.oy;
-				s.zLen = Math.max(20, (dx * cosZ - dy * sinZ));
-			}
-			break;
-		}
+
 	}
 }
 

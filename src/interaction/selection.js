@@ -104,12 +104,7 @@ export function moveSelectedStrokes(dx, dy) {
 				case 'axes':
 					s.ox += dx; s.oy += dy;
 					break;
-				case 'numberline':
-					s.ox += dx; s.oy += dy;
-					break;
-				case 'axes3d':
-					s.ox += dx; s.oy += dy;
-					break;
+
 			}
 		}
 
@@ -172,8 +167,6 @@ export function pasteStrokes() {
 				case 'sine': case 'cosine':
 					s.C += offset; s.D += offset; s.xMin += offset; s.xMax += offset; break;
 				case 'axes': s.ox += offset; s.oy += offset; break;
-				case 'numberline': s.ox += offset; s.oy += offset; break;
-				case 'axes3d': s.ox += offset; s.oy += offset; break;
 			}
 		}
 

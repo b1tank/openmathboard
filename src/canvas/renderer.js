@@ -11,8 +11,6 @@ import { renderParabola } from '../shapes/parabola.js';
 import { renderSine } from '../shapes/sine.js';
 import { renderArrow } from '../shapes/arrow.js';
 import { renderAxes } from '../shapes/axes.js';
-import { renderNumberline } from '../shapes/numberline.js';
-import { renderAxes3d } from '../shapes/axes3d.js';
 import { renderAnchors } from './anchors.js';
 import { pointToSegmentDistance, pointToPolylineDistance, getBounds } from '../interaction/detection.js';
 
@@ -26,8 +24,6 @@ const RENDERERS = {
 	cosine: renderSine, // Same renderer handles both
 	arrow: renderArrow,
 	axes: renderAxes,
-	numberline: renderNumberline,
-	axes3d: renderAxes3d,
 };
 
 // Dirty flag for performance
@@ -215,20 +211,7 @@ export function getStrokeBounds(stroke) {
 					minX: s.xMin, maxX: s.xMax,
 					minY: s.D - Math.abs(s.A), maxY: s.D + Math.abs(s.A)
 				};
-			case 'axes3d': {
-				const cosZ = Math.cos(Math.PI - Math.PI / 6);
-				const sinZ = Math.sin(Math.PI - Math.PI / 6);
-				const zx = s.ox + s.zLen * cosZ, zy = s.oy - s.zLen * sinZ;
-				return {
-					minX: Math.min(s.ox, zx), minY: Math.min(s.oy - s.yLen, zy),
-					maxX: s.ox + s.xLen, maxY: s.oy
-				};
-			}
-			case 'numberline':
-				return {
-					minX: s.ox - s.leftLen, minY: s.oy - 10,
-					maxX: s.ox + s.rightLen, maxY: s.oy + 10
-				};
+
 		}
 	}
 
