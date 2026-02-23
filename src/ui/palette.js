@@ -16,6 +16,10 @@ import { t } from '../i18n/i18n.js';
 let paletteEl = null;
 let isOpen = false;
 
+// Drag state
+let dragShape = null;
+let dragGhost = null;
+
 const SHAPE_CONSTRUCTORS = {
 	line: createDefaultLine,
 	circle: createDefaultCircle,
@@ -73,7 +77,7 @@ function buildPalette() {
 		item.className = 'shape-palette-item';
 		item.dataset.shape = shape;
 		item.innerHTML = `${SHAPE_ICONS[shape] || ''}<span data-i18n="${i18nKey}">${t(i18nKey)}</span>`;
-		item.addEventListener('click', () => placeShape(shape));
+		item.addEventListener('pointerdown', (e) => startDrag(e, shape));
 		grid.appendChild(item);
 	}
 
@@ -91,21 +95,82 @@ export function refreshPaletteLabels() {
 	});
 }
 
-function placeShape(shapeType) {
+function placeShape(shapeType, screenX, screenY) {
 	const constructor = SHAPE_CONSTRUCTORS[shapeType];
 	if (!constructor) return;
 
 	hideHeroSection();
 
-	// Place at center of current viewport
 	const rect = getCanvasRect();
-	const centerScreen = { x: rect.width / 2, y: rect.height / 2 };
-	const worldPos = screenToWorld(centerScreen.x, centerScreen.y);
+	const worldPos = screenToWorld(screenX - rect.left, screenY - rect.top);
 
 	const obj = constructor(worldPos.x, worldPos.y);
 	getStrokes().push(obj);
 	redrawCanvas();
 	saveToHistory();
+}
+
+function startDrag(e, shapeType) {
+	e.preventDefault();
+	dragShape = shapeType;
+
+	// Create ghost element
+	dragGhost = document.createElement('div');
+	dragGhost.className = 'shape-drag-ghost';
+	dragGhost.innerHTML = SHAPE_ICONS[shapeType] || '';
+	document.body.appendChild(dragGhost);
+	positionGhost(e.clientX, e.clientY);
+
+	document.addEventListener('pointermove', onDragMove);
+	document.addEventListener('pointerup', onDragEnd);
+	document.addEventListener('pointercancel', onDragCancel);
+}
+
+function positionGhost(x, y) {
+	if (!dragGhost) return;
+	dragGhost.style.left = x + 'px';
+	dragGhost.style.top = y + 'px';
+}
+
+function onDragMove(e) {
+	e.preventDefault();
+	positionGhost(e.clientX, e.clientY);
+}
+
+function onDragEnd(e) {
+	cleanupDragListeners();
+	if (!dragShape) return;
+
+	const rect = getCanvasRect();
+	const x = e.clientX;
+	const y = e.clientY;
+
+	// Only place if dropped over the canvas area
+	if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+		placeShape(dragShape, x, y);
+	}
+
+	dragShape = null;
+	removeDragGhost();
+}
+
+function onDragCancel() {
+	cleanupDragListeners();
+	dragShape = null;
+	removeDragGhost();
+}
+
+function cleanupDragListeners() {
+	document.removeEventListener('pointermove', onDragMove);
+	document.removeEventListener('pointerup', onDragEnd);
+	document.removeEventListener('pointercancel', onDragCancel);
+}
+
+function removeDragGhost() {
+	if (dragGhost) {
+		dragGhost.remove();
+		dragGhost = null;
+	}
 }
 
 export function toggleShapePalette() {
