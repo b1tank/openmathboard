@@ -118,13 +118,8 @@ html, body {
   display: none;
   align-items: center;
   gap: 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.mobile-tools::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
+  touch-action: manipulation;
 }
 
 .mobile-tools .toolbar-btn,
