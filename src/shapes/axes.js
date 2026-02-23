@@ -28,24 +28,7 @@ export function renderAxes(ctx, obj) {
 	drawArrowhead(ctx, ox, oy - yNeg, -Math.PI / 2, hl, ha); // -y (up)
 	drawArrowhead(ctx, ox, oy + yPos, Math.PI / 2, hl, ha);  // +y (down)
 
-	// Tick marks (optional)
-	if (s.showTicks !== false) {
-		const tickSize = 5;
-		const tickSpacing = 30;
 
-		for (let x = ox + tickSpacing; x < ox + xPos; x += tickSpacing) {
-			ctx.beginPath(); ctx.moveTo(x, oy - tickSize); ctx.lineTo(x, oy + tickSize); ctx.stroke();
-		}
-		for (let x = ox - tickSpacing; x > ox - xNeg; x -= tickSpacing) {
-			ctx.beginPath(); ctx.moveTo(x, oy - tickSize); ctx.lineTo(x, oy + tickSize); ctx.stroke();
-		}
-		for (let y = oy - tickSpacing; y > oy - yNeg; y -= tickSpacing) {
-			ctx.beginPath(); ctx.moveTo(ox - tickSize, y); ctx.lineTo(ox + tickSize, y); ctx.stroke();
-		}
-		for (let y = oy + tickSpacing; y < oy + yPos; y += tickSpacing) {
-			ctx.beginPath(); ctx.moveTo(ox - tickSize, y); ctx.lineTo(ox + tickSize, y); ctx.stroke();
-		}
-	}
 }
 
 function drawArrowhead(ctx, tipX, tipY, angle, len, spread) {
@@ -70,7 +53,7 @@ export function createDefaultAxes(worldX, worldY) {
 			ox: worldX, oy: worldY,
 			xPosLen: 120, xNegLen: 120,
 			yPosLen: 120, yNegLen: 120,
-			showTicks: true,
+			showTicks: false,
 			// Legacy compat
 			xLen: 120, yLen: 120
 		},
