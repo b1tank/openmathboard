@@ -2,7 +2,7 @@
   <img src="logo.svg" alt="OpenMathBoard" width="80" height="80">
 </p>
 
-<h1 align="center">OpenMathBoard 简学板</h1>
+<h1 align="center">OpenMathBoard 乐之数学画板</h1>
 
 <p align="center">
   <strong>An open-source math sketching whiteboard with intent-based geometry.</strong><br>

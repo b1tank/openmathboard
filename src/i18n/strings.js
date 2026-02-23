@@ -116,7 +116,7 @@ export const TRANSLATIONS = {
 	},
 	zh: {
 		// Page title
-		pageTitle: '简学板',
+		pageTitle: '乐之数学画板',
 
 		// Toolbar tooltips
 		backToHome: '返回主页',
@@ -206,7 +206,7 @@ export const TRANSLATIONS = {
 
 		// Hero section
 		heroTitle: '欢迎使用',
-		heroBrandName: '简学板',
+		heroBrandName: '乐之数学画板',
 		heroSubtitle: '简洁的数学教学画布',
 		heroFeatureDraw: '在任意位置开始绘画',
 		heroFeatureShapes: '绘制并转换为精确的数学图形',
