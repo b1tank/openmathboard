@@ -1,30 +1,25 @@
-# Sprint — Selection, Anchors & Rotation Overhaul
+# Sprint — Shape Palette UX & Cleanup
 
 ## Goal
-Make selection, moving, anchoring, and rotation work seamlessly for all shapes.
+Improve shape palette interaction (drag-only creates), cleanup parabola auto-detect, add horizontal/vertical lines, fix axes width.
 
 ## Tasks
 
-- [x] **T1 — Selection boundary dashed rectangle + move anywhere inside**
-  Polish dashed boundary. Allow drag-move by clicking anywhere inside the bounding box (not just on the stroke).
+- [x] **T1 — Drag-to-create shapes only (no click-create)**
+  Clicking a shape in the palette should only focus/highlight it, not create it on canvas. Only dragging from palette onto the canvas creates the shape.
 
-- [x] **T2 — H/V stretch anchors for all shapes**
-  Add 4 edge-midpoint general stretch anchors (N, S, E, W) on bounding box for every shape. Dragging scales the shape horizontally or vertically.
+- [x] **T2 — 2D axes medium width**
+  Change axes default width from 2 to 4 (matching other shapes like line, parabola, etc.).
 
-- [x] **T3 — Rotation anchor outside boundary**
-  Rotation icon anchor above top-center, connected by thin line. Dragging rotates shape around its center.
+- [x] **T3 — Remove parabola auto-detect from conversion popup**
+  Remove parabola detection from the freehand conversion popup entirely. The built-in parabola shape in the palette is sufficient.
 
-- [x] **T4 — Parabola special anchors**
-  Left end, right end, vertex. Drag vertex changes curve with ends fixed; parabola flips between peak/valley when vertex crosses the line between endpoints.
+- [x] **T4 — Add horizontal and vertical straight line shapes**
+  Add perfectly horizontal and vertical line shapes to the palette as separate entries.
 
-- [x] **T5 — Audit all shapes for anchor completeness**
-  Verified: line, arrow, circle, ellipse, sine/cosine, axes, numberline, axes3d all have correct special anchors. Freehand gets general anchors only.
-
-- [x] **T6 — Build check & push**
+- [x] **T5 — Build check & push**
 
 ## Hiccups & Notes
 
-- Parabola vertex drag required storing endpoint y-values at drag start (in dragInfo) since the shape params change incrementally during drag
-- getStrokeBounds already had freehand fallback so general anchors worked for all strokes without additional code
-- Rotation stored as shape.rotation and applied via ctx.rotate transform in renderer
-- Stretch anchors use green (#16a34a) and rotation uses orange (#ea580c) for visual hierarchy against blue special anchors
+- No blockers encountered. All tasks completed cleanly.
+
