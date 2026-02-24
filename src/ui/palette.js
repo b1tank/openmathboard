@@ -19,6 +19,10 @@ let isOpen = false;
 // Drag state
 let dragShape = null;
 let dragGhost = null;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragStarted = false;
+const DRAG_THRESHOLD = 8; // min pixels before drag activates
 
 const SHAPE_CONSTRUCTORS = {
 	line: createDefaultLine,
@@ -113,13 +117,9 @@ function placeShape(shapeType, screenX, screenY) {
 function startDrag(e, shapeType) {
 	e.preventDefault();
 	dragShape = shapeType;
-
-	// Create ghost element
-	dragGhost = document.createElement('div');
-	dragGhost.className = 'shape-drag-ghost';
-	dragGhost.innerHTML = SHAPE_ICONS[shapeType] || '';
-	document.body.appendChild(dragGhost);
-	positionGhost(e.clientX, e.clientY);
+	dragStartX = e.clientX;
+	dragStartY = e.clientY;
+	dragStarted = false;
 
 	document.addEventListener('pointermove', onDragMove);
 	document.addEventListener('pointerup', onDragEnd);
@@ -134,6 +134,20 @@ function positionGhost(x, y) {
 
 function onDragMove(e) {
 	e.preventDefault();
+
+	// Only start visual drag after exceeding threshold
+	if (!dragStarted) {
+		const dist = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
+		if (dist < DRAG_THRESHOLD) return;
+		dragStarted = true;
+
+		// Create ghost element on first real drag move
+		dragGhost = document.createElement('div');
+		dragGhost.className = 'shape-drag-ghost';
+		dragGhost.innerHTML = SHAPE_ICONS[dragShape] || '';
+		document.body.appendChild(dragGhost);
+	}
+
 	positionGhost(e.clientX, e.clientY);
 }
 
@@ -141,22 +155,27 @@ function onDragEnd(e) {
 	cleanupDragListeners();
 	if (!dragShape) return;
 
-	const rect = getCanvasRect();
-	const x = e.clientX;
-	const y = e.clientY;
+	// Only place if a real drag occurred (not just a click)
+	if (dragStarted) {
+		const rect = getCanvasRect();
+		const x = e.clientX;
+		const y = e.clientY;
 
-	// Only place if dropped over the canvas area
-	if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-		placeShape(dragShape, x, y);
+		// Only place if dropped over the canvas area
+		if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+			placeShape(dragShape, x, y);
+		}
 	}
 
 	dragShape = null;
+	dragStarted = false;
 	removeDragGhost();
 }
 
 function onDragCancel() {
 	cleanupDragListeners();
 	dragShape = null;
+	dragStarted = false;
 	removeDragGhost();
 }
 
