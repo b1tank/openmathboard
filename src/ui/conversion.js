@@ -1,7 +1,7 @@
 // OpenMathBoard — "Draw then choose" conversion popup
 import { getStrokes, getCamera } from '../core/state.js';
 import {
-	detectLine, detectCircle, detectParabola,
+	detectLine, detectCircle,
 	getSmartShapeParams, simplifyStrokePoints, getBounds, generateCirclePoints
 } from '../interaction/detection.js';
 import { redrawCanvas } from '../canvas/renderer.js';
@@ -43,11 +43,6 @@ export function showConversionPopup(stroke, screenX, screenY) {
 		candidates.push({ type: 'circle', score: circleResult.score, data: circleResult });
 	}
 
-	const parabolaResult = detectParabola(rawPoints, diag, stroke.width, params);
-	if (parabolaResult && parabolaResult.score >= params.acceptParabola) {
-		candidates.push({ type: 'parabola', score: parabolaResult.score, data: parabolaResult });
-	}
-
 	if (candidates.length === 0) return;
 
 	candidates.sort((a, b) => b.score - a.score);
@@ -56,18 +51,16 @@ export function showConversionPopup(stroke, screenX, screenY) {
 	const shapeLabels = {
 		line: t('shapeLine'),
 		circle: t('shapeCircle'),
-		parabola: t('shapeParabola'),
 	};
 
 	const shapeIcons = {
 		line: '📏',
 		circle: '⭕',
-		parabola: '📐',
 	};
 
 	popupEl.innerHTML = candidates.map(c =>
 		`<button data-shape="${c.type}">${shapeIcons[c.type] || ''} ${shapeLabels[c.type] || c.type}</button>`
-	).join('') + `<button data-shape="keep">✏️ ${t('convertKeep')}</button>`;
+	).join('');
 
 	// Position near stroke end
 	popupEl.style.left = Math.min(screenX + 10, window.innerWidth - 200) + 'px';
@@ -117,25 +110,6 @@ function convertLastStroke(shapeType, candidates) {
 			...stroke,
 			shape: { type: 'circle', cx: r.cx, cy: r.cy, r: r.r },
 			points: generateCirclePoints(r.cx, r.cy, r.r, 120)
-		};
-	} else if (shapeType === 'parabola') {
-		const r = candidate.data;
-		// Convert old parabola format to new v2 format
-		const h = r.mode === 'yOfX' ? r.origin : 0;
-		const k = r.mode === 'yOfX' ? r.c : r.origin;
-		const a_val = r.a;
-		const xMin = r.mode === 'yOfX' ? r.origin + r.tMin : r.c + r.tMin;
-		const xMax = r.mode === 'yOfX' ? r.origin + r.tMax : r.c + r.tMax;
-		strokes[lastIdx] = {
-			...stroke,
-			shape: {
-				type: 'parabola',
-				h, k, a: a_val, xMin, xMax,
-				// Keep legacy fields for backward compat
-				mode: r.mode, origin: r.origin,
-				b: r.b, c: r.c, tMin: r.tMin, tMax: r.tMax
-			},
-			points: stroke.points
 		};
 	}
 
