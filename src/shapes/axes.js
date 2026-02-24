@@ -43,7 +43,7 @@ export function createDefaultAxes(worldX, worldY) {
 		id: crypto.randomUUID(),
 		type: 'axes',
 		color: '#000000',
-		width: 2,
+		width: 4,
 		dash: false,
 		fill: 'none',
 		shape: {
