@@ -14,7 +14,7 @@ module.exports = defineConfig({
     headless: true,
   },
   webServer: {
-    command: 'npx serve . -l 8080',
+    command: 'npx vite --port 8080',
     port: 8080,
     reuseExistingServer: !process.env.CI,
   },

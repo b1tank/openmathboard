@@ -1,8 +1,9 @@
 // OpenMathBoard — Toolbar setup, dropdowns, mobile menu
-import { getDomRefs, getCurrentDash } from '../core/state.js';
+import { getDomRefs, getCurrentDash, getStrokes, setStrokes } from '../core/state.js';
 import { setTool, setColor, setStrokeWidth, setDash } from '../interaction/tools.js';
 import { TOOLS } from '../core/state.js';
-import { undo, redo } from '../core/history.js';
+import { undo, redo, saveToHistory } from '../core/history.js';
+import { redrawCanvas } from '../canvas/renderer.js';
 import { copyToClipboard, saveImage } from './export.js';
 import { handleFileSelect } from './images.js';
 import { t } from '../i18n/i18n.js';
@@ -198,20 +199,14 @@ function setupMobileToolbar() {
 }
 
 function clearCanvas() {
-	Promise.all([
-		import('../core/state.js'),
-		import('../canvas/renderer.js'),
-		import('../core/history.js')
-	]).then(([stateMod, rendererMod, historyMod]) => {
-		const refs = getDomRefs();
-		const strokes = stateMod.getStrokes();
-		if (strokes.length === 0 && refs.imagesLayer.children.length === 0) return;
-		if (confirm(t('confirmClear'))) {
-			stateMod.setStrokes([]);
-			refs.imagesLayer.innerHTML = '';
-			rendererMod.redrawCanvas();
-			historyMod.saveToHistory();
-			showToast(t('toastCanvasCleared'));
-		}
-	});
+	const refs = getDomRefs();
+	const strokes = getStrokes();
+	if (strokes.length === 0 && refs.imagesLayer.children.length === 0) return;
+	if (confirm(t('confirmClear'))) {
+		setStrokes([]);
+		refs.imagesLayer.innerHTML = '';
+		redrawCanvas();
+		saveToHistory();
+		showToast(t('toastCanvasCleared'));
+	}
 }

@@ -12,6 +12,7 @@ infra/*.json
 *.swo
 app.js.bak
 node_modules/
+dist/
 .playwright-mcp/
 
 test-results/
