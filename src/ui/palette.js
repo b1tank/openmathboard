@@ -8,6 +8,9 @@ import { createDefaultParabola } from '../shapes/parabola.js';
 import { createDefaultSine, createDefaultCosine } from '../shapes/sine.js';
 import { createDefaultArrow } from '../shapes/arrow.js';
 import { createDefaultAxes } from '../shapes/axes.js';
+import { createDefaultSquare } from '../shapes/square.js';
+import { createDefaultRectangle } from '../shapes/rectangle.js';
+import { createDefaultTriangle } from '../shapes/triangle.js';
 import { redrawCanvas } from '../canvas/renderer.js';
 import { saveToHistory } from '../core/history.js';
 import { hideHeroSection } from './hero.js';
@@ -25,9 +28,11 @@ let dragStarted = false;
 const DRAG_THRESHOLD = 8; // min pixels before drag activates
 
 const SHAPE_CONSTRUCTORS = {
-	line: createDefaultLine,
 	hline: createDefaultHLine,
 	vline: createDefaultVLine,
+	square: createDefaultSquare,
+	rectangle: createDefaultRectangle,
+	triangle: createDefaultTriangle,
 	circle: createDefaultCircle,
 	ellipse: createDefaultEllipse,
 	parabola: createDefaultParabola,
@@ -38,9 +43,11 @@ const SHAPE_CONSTRUCTORS = {
 };
 
 const SHAPE_ICONS = {
-	line: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="28" x2="28" y2="4"/></svg>',
 	hline: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="16" x2="30" y2="16"/></svg>',
 	vline: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="16" y1="2" x2="16" y2="30"/></svg>',
+	square: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="24" height="24"/></svg>',
+	rectangle: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="28" height="18"/></svg>',
+	triangle: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><polygon points="16,4 4,28 28,28"/></svg>',
 	circle: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="12"/></svg>',
 	ellipse: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="16" cy="16" rx="14" ry="9"/></svg>',
 	parabola: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 28 Q16 0 28 28"/></svg>',
@@ -78,7 +85,7 @@ function buildPalette() {
 	const grid = document.createElement('div');
 	grid.className = 'shape-palette-grid';
 
-	const shapes = ['line', 'hline', 'vline', 'circle', 'ellipse', 'parabola', 'sine', 'cosine', 'arrow', 'axes'];
+	const shapes = ['hline', 'vline', 'square', 'rectangle', 'triangle', 'circle', 'ellipse', 'parabola', 'sine', 'cosine', 'arrow', 'axes'];
 	for (const shape of shapes) {
 		const i18nKey = 'shape' + shape.charAt(0).toUpperCase() + shape.slice(1);
 		const item = document.createElement('button');

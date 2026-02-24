@@ -11,6 +11,9 @@ import { renderParabola } from '../shapes/parabola.js';
 import { renderSine } from '../shapes/sine.js';
 import { renderArrow } from '../shapes/arrow.js';
 import { renderAxes } from '../shapes/axes.js';
+import { renderSquare } from '../shapes/square.js';
+import { renderRectangle } from '../shapes/rectangle.js';
+import { renderTriangle } from '../shapes/triangle.js';
 import { renderAnchors } from './anchors.js';
 import { pointToSegmentDistance, pointToPolylineDistance, getBounds } from '../interaction/detection.js';
 
@@ -24,6 +27,9 @@ const RENDERERS = {
 	cosine: renderSine, // Same renderer handles both
 	arrow: renderArrow,
 	axes: renderAxes,
+	square: renderSquare,
+	rectangle: renderRectangle,
+	triangle: renderTriangle,
 };
 
 // Dirty flag for performance
@@ -194,6 +200,17 @@ export function getStrokeBounds(stroke) {
 					maxX: s.ox + xPos, maxY: s.oy + yPos
 				};
 			}
+			case 'square': {
+				const half = s.size / 2;
+				return { minX: s.cx - half, minY: s.cy - half, maxX: s.cx + half, maxY: s.cy + half };
+			}
+			case 'rectangle':
+				return { minX: s.cx - s.w / 2, minY: s.cy - s.h / 2, maxX: s.cx + s.w / 2, maxY: s.cy + s.h / 2 };
+			case 'triangle':
+				return {
+					minX: Math.min(s.x1, s.x2, s.x3), minY: Math.min(s.y1, s.y2, s.y3),
+					maxX: Math.max(s.x1, s.x2, s.x3), maxY: Math.max(s.y1, s.y2, s.y3)
+				};
 			case 'parabola': {
 				// Compute actual y range from parametric
 				const yVertex = s.k;
@@ -245,6 +262,29 @@ export function isPointNearStroke(pos, stroke, threshold = 15) {
 				const yP = s.yPosLen || s.yLen || 120, yN = s.yNegLen || s.yLen || 120;
 				if (pos.y >= s.oy - half && pos.y <= s.oy + half && pos.x >= s.ox - xN - half && pos.x <= s.ox + xP + half) return true;
 				if (pos.x >= s.ox - half && pos.x <= s.ox + half && pos.y >= s.oy - yN - half && pos.y <= s.oy + yP + half) return true;
+				return false;
+			}
+			case 'square': {
+				const sz = s.size / 2;
+				const l = s.cx - sz, r = s.cx + sz, t = s.cy - sz, b = s.cy + sz;
+				if (pos.x >= l - half && pos.x <= r + half && Math.abs(pos.y - t) < half) return true;
+				if (pos.x >= l - half && pos.x <= r + half && Math.abs(pos.y - b) < half) return true;
+				if (pos.y >= t - half && pos.y <= b + half && Math.abs(pos.x - l) < half) return true;
+				if (pos.y >= t - half && pos.y <= b + half && Math.abs(pos.x - r) < half) return true;
+				return false;
+			}
+			case 'rectangle': {
+				const rl = s.cx - s.w / 2, rr = s.cx + s.w / 2, rt = s.cy - s.h / 2, rb = s.cy + s.h / 2;
+				if (pos.x >= rl - half && pos.x <= rr + half && Math.abs(pos.y - rt) < half) return true;
+				if (pos.x >= rl - half && pos.x <= rr + half && Math.abs(pos.y - rb) < half) return true;
+				if (pos.y >= rt - half && pos.y <= rb + half && Math.abs(pos.x - rl) < half) return true;
+				if (pos.y >= rt - half && pos.y <= rb + half && Math.abs(pos.x - rr) < half) return true;
+				return false;
+			}
+			case 'triangle': {
+				if (pointToSegmentDistance(pos, { x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }) < half) return true;
+				if (pointToSegmentDistance(pos, { x: s.x2, y: s.y2 }, { x: s.x3, y: s.y3 }) < half) return true;
+				if (pointToSegmentDistance(pos, { x: s.x3, y: s.y3 }, { x: s.x1, y: s.y1 }) < half) return true;
 				return false;
 			}
 		}

@@ -130,6 +130,24 @@ function getShapeAnchors(obj) {
 				{ id: 'yPosEnd', x: s.ox, y: s.oy + yPos, type: 'scale' },
 			];
 		}
+		case 'square': {
+			const half = s.size / 2;
+			return [
+				{ id: 'scale', x: s.cx + half, y: s.cy + half, type: 'scale' },
+			];
+		}
+		case 'rectangle': {
+			return [
+				{ id: 'right', x: s.cx + s.w / 2, y: s.cy, type: 'scale' },
+				{ id: 'bottom', x: s.cx, y: s.cy + s.h / 2, type: 'scale' },
+			];
+		}
+		case 'triangle':
+			return [
+				{ id: 'p1', x: s.x1, y: s.y1, type: 'endpoint' },
+				{ id: 'p2', x: s.x2, y: s.y2, type: 'endpoint' },
+				{ id: 'p3', x: s.x3, y: s.y3, type: 'endpoint' },
+			];
 		default:
 			return [];
 	}
@@ -225,6 +243,20 @@ export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 			if (anchorId === 'xNegEnd') { s.xNegLen = Math.max(20, s.ox - newWorldPos.x); }
 			if (anchorId === 'yNegEnd') { s.yNegLen = Math.max(20, s.oy - newWorldPos.y); }
 			if (anchorId === 'yPosEnd') { s.yPosLen = Math.max(20, newWorldPos.y - s.oy); }
+			break;
+		case 'square':
+			if (anchorId === 'scale') {
+				s.size = Math.max(10, Math.max(Math.abs(newWorldPos.x - s.cx), Math.abs(newWorldPos.y - s.cy)) * 2);
+			}
+			break;
+		case 'rectangle':
+			if (anchorId === 'right') { s.w = Math.max(10, Math.abs(newWorldPos.x - s.cx) * 2); }
+			if (anchorId === 'bottom') { s.h = Math.max(10, Math.abs(newWorldPos.y - s.cy) * 2); }
+			break;
+		case 'triangle':
+			if (anchorId === 'p1') { s.x1 = newWorldPos.x; s.y1 = newWorldPos.y; }
+			if (anchorId === 'p2') { s.x2 = newWorldPos.x; s.y2 = newWorldPos.y; }
+			if (anchorId === 'p3') { s.x3 = newWorldPos.x; s.y3 = newWorldPos.y; }
 			break;
 
 	}

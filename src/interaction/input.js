@@ -352,6 +352,11 @@ function eraseAtPoint(pos) {
 			return pointToPolylineDistance(pos, stroke.points) > band;
 		}
 
+		// Generic shape eraser using renderer hit-test (covers square, rectangle, triangle, etc.)
+		if (stroke.shape) {
+			return !isPointNearStroke(pos, stroke, eraseRadius);
+		}
+
 		return !stroke.points.some(point => {
 			const dx = point.x - pos.x;
 			const dy = point.y - pos.y;

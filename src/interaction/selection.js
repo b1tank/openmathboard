@@ -104,6 +104,17 @@ export function moveSelectedStrokes(dx, dy) {
 				case 'axes':
 					s.ox += dx; s.oy += dy;
 					break;
+				case 'square':
+					s.cx += dx; s.cy += dy;
+					break;
+				case 'rectangle':
+					s.cx += dx; s.cy += dy;
+					break;
+				case 'triangle':
+					s.x1 += dx; s.y1 += dy;
+					s.x2 += dx; s.y2 += dy;
+					s.x3 += dx; s.y3 += dy;
+					break;
 
 			}
 		}
@@ -167,6 +178,13 @@ export function pasteStrokes() {
 				case 'sine': case 'cosine':
 					s.C += offset; s.D += offset; s.xMin += offset; s.xMax += offset; break;
 				case 'axes': s.ox += offset; s.oy += offset; break;
+				case 'square': s.cx += offset; s.cy += offset; break;
+				case 'rectangle': s.cx += offset; s.cy += offset; break;
+				case 'triangle':
+					s.x1 += offset; s.y1 += offset;
+					s.x2 += offset; s.y2 += offset;
+					s.x3 += offset; s.y3 += offset;
+					break;
 			}
 		}
 
