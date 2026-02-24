@@ -1,7 +1,7 @@
 // OpenMathBoard — Shape palette UI (toolbar drawer)
 import { getStrokes, getCamera, getCanvasRect, getDomRefs } from '../core/state.js';
 import { screenToWorld } from '../canvas/camera.js';
-import { createDefaultLine } from '../shapes/line.js';
+import { createDefaultLine, createDefaultHLine, createDefaultVLine } from '../shapes/line.js';
 import { createDefaultCircle } from '../shapes/circle.js';
 import { createDefaultEllipse } from '../shapes/ellipse.js';
 import { createDefaultParabola } from '../shapes/parabola.js';
@@ -26,6 +26,8 @@ const DRAG_THRESHOLD = 8; // min pixels before drag activates
 
 const SHAPE_CONSTRUCTORS = {
 	line: createDefaultLine,
+	hline: createDefaultHLine,
+	vline: createDefaultVLine,
 	circle: createDefaultCircle,
 	ellipse: createDefaultEllipse,
 	parabola: createDefaultParabola,
@@ -37,6 +39,8 @@ const SHAPE_CONSTRUCTORS = {
 
 const SHAPE_ICONS = {
 	line: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="28" x2="28" y2="4"/></svg>',
+	hline: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="16" x2="30" y2="16"/></svg>',
+	vline: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="16" y1="2" x2="16" y2="30"/></svg>',
 	circle: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="12"/></svg>',
 	ellipse: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="16" cy="16" rx="14" ry="9"/></svg>',
 	parabola: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 28 Q16 0 28 28"/></svg>',
@@ -74,7 +78,7 @@ function buildPalette() {
 	const grid = document.createElement('div');
 	grid.className = 'shape-palette-grid';
 
-	const shapes = ['line', 'circle', 'ellipse', 'parabola', 'sine', 'cosine', 'arrow', 'axes'];
+	const shapes = ['line', 'hline', 'vline', 'circle', 'ellipse', 'parabola', 'sine', 'cosine', 'arrow', 'axes'];
 	for (const shape of shapes) {
 		const i18nKey = 'shape' + shape.charAt(0).toUpperCase() + shape.slice(1);
 		const item = document.createElement('button');

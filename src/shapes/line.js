@@ -30,6 +30,50 @@ export function createDefaultLine(worldX, worldY) {
 	};
 }
 
+export function createDefaultHLine(worldX, worldY) {
+	return {
+		id: crypto.randomUUID(),
+		type: 'line',
+		color: '#000000',
+		width: 4,
+		dash: false,
+		fill: 'none',
+		shape: {
+			type: 'line',
+			x1: worldX - 100,
+			y1: worldY,
+			x2: worldX + 100,
+			y2: worldY
+		},
+		points: [
+			{ x: worldX - 100, y: worldY },
+			{ x: worldX + 100, y: worldY }
+		]
+	};
+}
+
+export function createDefaultVLine(worldX, worldY) {
+	return {
+		id: crypto.randomUUID(),
+		type: 'line',
+		color: '#000000',
+		width: 4,
+		dash: false,
+		fill: 'none',
+		shape: {
+			type: 'line',
+			x1: worldX,
+			y1: worldY - 100,
+			x2: worldX,
+			y2: worldY + 100
+		},
+		points: [
+			{ x: worldX, y: worldY - 100 },
+			{ x: worldX, y: worldY + 100 }
+		]
+	};
+}
+
 export function isPointNearLine(pos, obj, threshold = 15) {
 	if (!obj.shape) return false;
 	const { x1, y1, x2, y2 } = obj.shape;

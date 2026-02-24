@@ -83,6 +83,8 @@ export const TRANSLATIONS = {
 
 		// Shape names
 		shapeLine: 'Line',
+		shapeHline: 'Horizontal Line',
+		shapeVline: 'Vertical Line',
 		shapeCircle: 'Circle',
 		shapeEllipse: 'Ellipse',
 		shapeParabola: 'Parabola',
@@ -196,6 +198,8 @@ export const TRANSLATIONS = {
 
 		// Shape names
 		shapeLine: '直线',
+		shapeHline: '水平线',
+		shapeVline: '垂直线',
 		shapeCircle: '圆形',
 		shapeEllipse: '椭圆',
 		shapeParabola: '抛物线',
