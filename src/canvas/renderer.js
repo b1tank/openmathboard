@@ -11,6 +11,7 @@ import { renderParabola } from '../shapes/parabola.js';
 import { renderSine } from '../shapes/sine.js';
 import { renderArrow } from '../shapes/arrow.js';
 import { renderAxes } from '../shapes/axes.js';
+import { renderHyperbola, isPointNearHyperbola } from '../shapes/hyperbola.js';
 import { renderSquare } from '../shapes/square.js';
 import { renderRectangle } from '../shapes/rectangle.js';
 import { renderTriangle } from '../shapes/triangle.js';
@@ -30,6 +31,7 @@ const RENDERERS = {
 	square: renderSquare,
 	rectangle: renderRectangle,
 	triangle: renderTriangle,
+	hyperbola: renderHyperbola,
 };
 
 // Dirty flag for performance
@@ -228,6 +230,12 @@ export function getStrokeBounds(stroke) {
 					minX: s.xMin, maxX: s.xMax,
 					minY: s.D - Math.abs(s.A), maxY: s.D + Math.abs(s.A)
 				};
+			case 'hyperbola': {
+				const yAtLeft = s.b * Math.sqrt(Math.max(0, (s.xMin - s.h) ** 2 / (s.a * s.a) - 1));
+				const yAtRight = s.b * Math.sqrt(Math.max(0, (s.xMax - s.h) ** 2 / (s.a * s.a) - 1));
+				const yExt = Math.max(yAtLeft, yAtRight);
+				return { minX: s.xMin, maxX: s.xMax, minY: s.k - yExt, maxY: s.k + yExt };
+			}
 
 		}
 	}
@@ -287,6 +295,8 @@ export function isPointNearStroke(pos, stroke, threshold = 15) {
 				if (pointToSegmentDistance(pos, { x: s.x3, y: s.y3 }, { x: s.x1, y: s.y1 }) < half) return true;
 				return false;
 			}
+			case 'hyperbola':
+				return isPointNearHyperbola(pos, stroke, threshold);
 		}
 	}
 

@@ -96,6 +96,10 @@ export function moveSelectedStrokes(dx, dy) {
 					if (s.origin !== undefined) s.origin += dx;
 					if (s.c !== undefined) s.c += dy;
 					break;
+				case 'hyperbola':
+					s.h += dx; s.k += dy;
+					s.xMin += dx; s.xMax += dx;
+					break;
 				case 'sine':
 				case 'cosine':
 					s.C += dx; s.D += dy;
@@ -174,6 +178,9 @@ export function pasteStrokes() {
 					s.h += offset; s.k += offset; s.xMin += offset; s.xMax += offset;
 					if (s.origin !== undefined) s.origin += offset;
 					if (s.c !== undefined) s.c += offset;
+					break;
+				case 'hyperbola':
+					s.h += offset; s.k += offset; s.xMin += offset; s.xMax += offset;
 					break;
 				case 'sine': case 'cosine':
 					s.C += offset; s.D += offset; s.xMin += offset; s.xMax += offset; break;

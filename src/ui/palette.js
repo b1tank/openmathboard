@@ -11,6 +11,7 @@ import { createDefaultAxes } from '../shapes/axes.js';
 import { createDefaultSquare } from '../shapes/square.js';
 import { createDefaultRectangle } from '../shapes/rectangle.js';
 import { createDefaultTriangle } from '../shapes/triangle.js';
+import { createDefaultHyperbola } from '../shapes/hyperbola.js';
 import { redrawCanvas } from '../canvas/renderer.js';
 import { saveToHistory } from '../core/history.js';
 import { hideHeroSection } from './hero.js';
@@ -40,6 +41,7 @@ const SHAPE_CONSTRUCTORS = {
 	cosine: createDefaultCosine,
 	arrow: createDefaultArrow,
 	axes: createDefaultAxes,
+	hyperbola: createDefaultHyperbola,
 };
 
 const SHAPE_ICONS = {
@@ -55,6 +57,7 @@ const SHAPE_ICONS = {
 	cosine: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8 C8 8 8 24 16 24 S24 8 30 8"/></svg>',
 	arrow: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="16" x2="24" y2="16"/><polyline points="20 10 26 16 20 22"/></svg>',
 	axes: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="20" x2="28" y2="20"/><line x1="10" y1="28" x2="10" y2="4"/><polyline points="6 8 10 4 14 8"/><polyline points="24 16 28 20 24 24"/></svg>',
+	hyperbola: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4 Q12 16 4 28"/><path d="M28 4 Q20 16 28 28"/></svg>',
 };
 
 export function initShapePalette() {
@@ -85,7 +88,7 @@ function buildPalette() {
 	const grid = document.createElement('div');
 	grid.className = 'shape-palette-grid';
 
-	const shapes = ['hline', 'vline', 'square', 'rectangle', 'triangle', 'circle', 'ellipse', 'parabola', 'sine', 'cosine', 'arrow', 'axes'];
+	const shapes = ['hline', 'vline', 'square', 'rectangle', 'triangle', 'circle', 'ellipse', 'parabola', 'hyperbola', 'sine', 'cosine', 'arrow', 'axes'];
 	for (const shape of shapes) {
 		const i18nKey = 'shape' + shape.charAt(0).toUpperCase() + shape.slice(1);
 		const item = document.createElement('button');

@@ -105,6 +105,12 @@ function getShapeAnchors(obj) {
 				{ id: 'left',  x: s.xMin, y: s.a * (s.xMin - s.h) ** 2 + s.k, type: 'endpoint' },
 				{ id: 'right', x: s.xMax, y: s.a * (s.xMax - s.h) ** 2 + s.k, type: 'endpoint' },
 			];
+		case 'hyperbola':
+			return [
+				{ id: 'center', x: s.h, y: s.k, type: 'curve' },
+				{ id: 'h-stretch', x: s.xMax, y: s.k, type: 'scale' },
+				{ id: 'co-vertex', x: s.h, y: s.k - s.b, type: 'scale' },
+			];
 		case 'sine':
 		case 'cosine': {
 			const midX = (s.xMin + s.xMax) / 2;
@@ -204,6 +210,20 @@ export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 				s.ry = Math.max(5, Math.abs(newWorldPos.y - s.cy));
 			}
 			break;
+		case 'hyperbola': {
+			if (anchorId === 'center') { s.h = newWorldPos.x; s.k = newWorldPos.y; }
+			if (anchorId === 'h-stretch') {
+				// Scale entire shape horizontally: maintain a/halfWidth ratio
+				const oldHalfW = s.xMax - s.h;
+				const newHalfW = Math.max(s.a + 10, newWorldPos.x - s.h);
+				const ratio = newHalfW / oldHalfW;
+				s.a = Math.max(5, s.a * ratio);
+				s.xMax = s.h + newHalfW;
+				s.xMin = s.h - newHalfW;
+			}
+			if (anchorId === 'co-vertex') { s.b = Math.max(5, Math.abs(newWorldPos.y - s.k)); }
+			break;
+		}
 		case 'parabola':
 			if (anchorId === 'vertex') {
 				const newH = Math.max(s.xMin + 1, Math.min(s.xMax - 1, newWorldPos.x));
