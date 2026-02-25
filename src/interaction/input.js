@@ -1,4 +1,12 @@
 // OpenMathBoard — Input handling (pointer/touch/keyboard events)
+//
+// Architecture: input capture and rendering are fully decoupled.
+//   pointerdown  → pure data setup + start render loop   (<0.1ms)
+//   pointermove  → push points to buffer only             (<0.1ms)
+//   pointerup    → finalize stroke data + stop loop       (<0.5ms)
+//                   heavy work deferred via rIC/setTimeout
+//   render loop  → independent RAF; blits cache + overlay
+
 import {
 	TOOLS, getCurrentTool, getCurrentColor, getCurrentStrokeWidth, getCurrentDash,
 	getIsDrawing, setIsDrawing,
@@ -35,21 +43,33 @@ import { showConversionPopup } from '../ui/conversion.js';
 import { findAnchorAtPoint, onAnchorDrag } from '../canvas/anchors.js';
 
 // ============ Touch/stylus detection ============
-// Track whether the device has a stylus (e.g. iPad + Apple Pencil).
-// When a stylus is present, finger input pans/zooms and pen draws.
-// When no stylus is detected (phones), finger input draws.
 let hasPenInput = false;
-// Track the active pointer (prevents multi-touch glitches)
 let activePointerId = null;
 
-// ============ RAF-batched rendering ============
-// Gate high-frequency pointermove redraws to one per animation frame.
-let rafId = null;
+// ============ Independent render loop ============
+// Runs continuously while any high-frequency interaction is active.
+// Stops itself when the interaction ends.
+let renderLoopId = null;
+let renderLoopActive = false;
 
-function scheduleRedraw() {
-	if (rafId !== null) return;
-	rafId = requestAnimationFrame(() => {
-		rafId = null;
+function startRenderLoop() {
+	if (renderLoopActive) return;
+	renderLoopActive = true;
+	renderLoopTick();
+}
+
+function stopRenderLoop() {
+	renderLoopActive = false;
+	// Don't cancel the current frame — let the last frame render cleanly.
+	// The loop self-terminates when renderLoopActive is false.
+}
+
+function renderLoopTick() {
+	if (!renderLoopActive) {
+		renderLoopId = null;
+		return;
+	}
+	renderLoopId = requestAnimationFrame(() => {
 		redrawCanvas();
 		// Draw in-progress stroke on top (PEN tool only)
 		const stroke = getCurrentStroke();
@@ -62,14 +82,22 @@ function scheduleRedraw() {
 			drawStroke(ctx, stroke, camera);
 			ctx.restore();
 		}
+		renderLoopTick(); // schedule next frame
 	});
 }
 
+// ============ Deferred heavy work ============
+// Runs history save, shape detection, etc. outside the input-critical path.
+function deferWork(fn) {
+	if (typeof requestIdleCallback === 'function') {
+		requestIdleCallback(() => fn(), { timeout: 100 });
+	} else {
+		setTimeout(fn, 0);
+	}
+}
+
 // ============ Coalesced events helpers ============
-// Minimum distance (world units) between consecutive points.
-// Filters sub-pixel noise while preserving visible detail.
-// Tune higher if zoomed detail feels too coarse.
-const MIN_POINT_SPACING = 1.5;
+const MIN_POINT_SPACING = 1.5; // world units
 
 function worldDistance(a, b) {
 	const dx = a.x - b.x;
@@ -105,28 +133,22 @@ function getPointerPos(e) {
 function onPointerDown(e) {
 	e.preventDefault();
 
-	// Don't start drawing when spacebar-panning
 	if (isSpacebarPanning()) return;
 
-	// Pencil/finger detection: pen draws, touch pans (only when stylus is available)
 	const isPencil = e.pointerType === 'pen';
 	const isFinger = e.pointerType === 'touch';
 
-	// Remember if a stylus has ever been used on this device
 	if (isPencil) hasPenInput = true;
 
-	// On devices with a stylus, finger always pans (handled by camera.js).
-	// On devices WITHOUT a stylus (phones), finger is allowed to draw.
 	if (isFinger && hasPenInput && getCurrentTool() !== TOOLS.SELECT) {
-		return; // Let camera.js handle touch pan/zoom
+		return;
 	}
 
-	// Multi-touch: if a second finger arrives, cancel in-progress drawing
-	// and let pinch-zoom (camera.js) take over.
 	if (isFinger && activePointerId !== null && activePointerId !== e.pointerId) {
 		if (getIsDrawing()) {
 			setIsDrawing(false);
 			setCurrentStroke(null);
+			stopRenderLoop();
 			redrawCanvas();
 		}
 		activePointerId = null;
@@ -144,7 +166,7 @@ function onPointerDown(e) {
 		const strokes = getStrokes();
 		const camera = getCamera();
 
-		// 1. Check if clicking on an anchor of a selected stroke
+		// 1. Anchor hit
 		if (selected.length > 0) {
 			for (const idx of selected) {
 				const stroke = strokes[idx];
@@ -153,7 +175,6 @@ function onPointerDown(e) {
 				if (anchor) {
 					setIsDraggingAnchor(true);
 					const info = { strokeIdx: idx, anchorId: anchor.id };
-					// For parabola vertex drag, save endpoint y-values
 					if (stroke.shape && stroke.shape.type === 'parabola' && anchor.id === 'vertex') {
 						const s = stroke.shape;
 						info.savedEndpointYLeft = s.a * (s.xMin - s.h) ** 2 + s.k;
@@ -161,19 +182,19 @@ function onPointerDown(e) {
 					}
 					setDraggingAnchorInfo(info);
 					setDragStartPos(pos);
+					startRenderLoop();
 					return;
 				}
 			}
 		}
 
-		// 2. Check if clicking inside the selection bounding box → drag selection
+		// 2. Selection bounds hit → drag
 		if (selected.length > 0) {
-			const PADDING = 6; // must match renderer padding
+			const PADDING = 6;
 			const insideBounds = selected.some(idx => {
 				const stroke = strokes[idx];
 				const bounds = getStrokeBounds(stroke);
 				if (!bounds) return false;
-				// Inverse-rotate point if shape is rotated
 				let testX = pos.x, testY = pos.y;
 				const rotation = (stroke.shape && stroke.shape.rotation) || 0;
 				if (rotation !== 0) {
@@ -193,11 +214,12 @@ function onPointerDown(e) {
 			if (insideBounds) {
 				setIsDraggingSelection(true);
 				setDragStartPos(pos);
+				startRenderLoop();
 				return;
 			}
 		}
 
-		// 3. Check if clicking on any stroke → select it
+		// 3. Click on stroke → select
 		const clickedStrokeIdx = findStrokeAtPoint(pos);
 		if (clickedStrokeIdx !== -1) {
 			setSelectedStrokes([clickedStrokeIdx]);
@@ -215,7 +237,7 @@ function onPointerDown(e) {
 		setSelectionRect({ x1: pos.screenX, y1: pos.screenY, x2: pos.screenX, y2: pos.screenY });
 		updateSelectionCursor();
 		updatePropertyPanel();
-		redrawCanvas();
+		startRenderLoop();
 		return;
 	}
 
@@ -224,6 +246,7 @@ function onPointerDown(e) {
 	if (getCurrentTool() === TOOLS.ERASER) {
 		eraseAtPoint(pos);
 		setIsDrawing(true);
+		startRenderLoop();
 	} else if (getCurrentTool() === TOOLS.PEN) {
 		setIsDrawing(true);
 		setCurrentStroke({
@@ -232,44 +255,41 @@ function onPointerDown(e) {
 			dash: getCurrentDash(),
 			points: [pos]
 		});
+		startRenderLoop();
 	}
 }
 
 function onPointerMove(e) {
-	// Ignore events from non-active pointers (prevents multi-touch glitches)
 	if (activePointerId !== null && e.pointerId !== activePointerId) return;
 
 	const pos = getPointerPos(e);
 
 	if (getCurrentTool() === TOOLS.SELECT) {
-		// Anchor dragging
+		// Anchor drag — data only, render loop handles display
 		if (getIsDraggingAnchor() && getDraggingAnchorInfo()) {
 			const info = getDraggingAnchorInfo();
 			const strokes = getStrokes();
 			const stroke = strokes[info.strokeIdx];
 			if (stroke) {
 				onAnchorDrag(stroke, info.anchorId, pos, info);
-				scheduleRedraw();
-				updatePropertyPanel();
 			}
 			return;
 		}
 
+		// Selection drag — data only
 		if (getIsDraggingSelection() && getDragStartPos()) {
 			const start = getDragStartPos();
 			const dx = pos.x - start.x;
 			const dy = pos.y - start.y;
 			moveSelectedStrokes(dx, dy);
 			setDragStartPos(pos);
-			scheduleRedraw();
-			updatePropertyPanel();
 			return;
 		}
 
+		// Selection rect — data only
 		if (getIsSelecting() && getSelectionRect()) {
 			const rect = getSelectionRect();
 			setSelectionRect({ ...rect, x2: pos.screenX, y2: pos.screenY });
-			scheduleRedraw();
 			return;
 		}
 		return;
@@ -280,6 +300,7 @@ function onPointerMove(e) {
 	if (getCurrentTool() === TOOLS.ERASER) {
 		eraseAtPoint(pos);
 	} else if (getCurrentTool() === TOOLS.PEN && getCurrentStroke()) {
+		// Harvest coalesced events for maximum point fidelity
 		const stroke = getCurrentStroke();
 		const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
 		for (const ce of events) {
@@ -289,21 +310,21 @@ function onPointerMove(e) {
 				stroke.points.push(pt);
 			}
 		}
-		scheduleRedraw();
+		// No scheduleRedraw / redrawCanvas here — render loop handles it
 	}
 }
 
 function onPointerUp(e) {
-	// Ignore events from non-active pointers
 	if (activePointerId !== null && e && e.pointerId !== activePointerId) return;
 	activePointerId = null;
 
 	if (getCurrentTool() === TOOLS.SELECT) {
-		// End anchor drag
 		if (getIsDraggingAnchor()) {
 			setIsDraggingAnchor(false);
 			setDraggingAnchorInfo(null);
-			saveToHistory();
+			stopRenderLoop();
+			// Defer history save — not input-critical
+			deferWork(() => { saveToHistory(); redrawCanvas(); });
 			updatePropertyPanel();
 			return;
 		}
@@ -311,8 +332,9 @@ function onPointerUp(e) {
 		if (getIsDraggingSelection()) {
 			setIsDraggingSelection(false);
 			setDragStartPos(null);
+			stopRenderLoop();
 			if (getSelectedStrokes().length > 0) {
-				saveToHistory();
+				deferWork(() => { saveToHistory(); redrawCanvas(); });
 			}
 			updatePropertyPanel();
 			return;
@@ -332,6 +354,7 @@ function onPointerUp(e) {
 			setSelectionRect(null);
 			updateSelectionCursor();
 			updatePropertyPanel();
+			stopRenderLoop();
 			redrawCanvas();
 			return;
 		}
@@ -340,10 +363,11 @@ function onPointerUp(e) {
 
 	if (!getIsDrawing()) return;
 	setIsDrawing(false);
+	stopRenderLoop();
 
 	const currentStroke = getCurrentStroke();
 	if (getCurrentTool() === TOOLS.PEN && currentStroke && currentStroke.points.length > 1) {
-		// Capture the final lift-point so the stroke doesn't end short
+		// Capture the final lift-point
 		if (e) {
 			const finalPt = getPointerPos(e);
 			const lastPt = currentStroke.points[currentStroke.points.length - 1];
@@ -351,22 +375,33 @@ function onPointerUp(e) {
 				currentStroke.points.push(finalPt);
 			}
 		}
+
+		// Commit stroke — lightweight data push only
 		getStrokes().push(currentStroke);
 		invalidateCache();
-		saveToHistory();
 
-		// Show conversion popup if shapes detected
+		// Snapshot screen coords for popup BEFORE clearing current stroke
 		const lastPt = currentStroke.points[currentStroke.points.length - 1];
 		const camera = getCamera();
 		const screenX = (lastPt.x - camera.x) * camera.zoom;
 		const screenY = (lastPt.y - camera.y) * camera.zoom + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-height')) || 56);
-		showConversionPopup(currentStroke, screenX, screenY);
-	}
 
-	// Clear in-progress stroke BEFORE any pending RAF fires.
-	// scheduleRedraw()'s callback checks getCurrentStroke() and gracefully handles null.
-	setCurrentStroke(null);
-	redrawCanvas();
+		// Clear in-progress stroke and do a single synchronous render
+		// This is fast because the cache is valid for all previously committed
+		// strokes — only the newly-added stroke triggers a cache rebuild.
+		setCurrentStroke(null);
+		redrawCanvas();
+
+		// Defer ALL heavy work: history clone + shape detection
+		// This keeps the main thread free for the next pointerdown
+		deferWork(() => {
+			saveToHistory();
+			showConversionPopup(currentStroke, screenX, screenY);
+		});
+	} else {
+		setCurrentStroke(null);
+		redrawCanvas();
+	}
 }
 
 function eraseAtPoint(pos) {
