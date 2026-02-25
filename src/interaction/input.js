@@ -12,7 +12,7 @@ import {
 	getClipboardStrokes,
 	getIsDraggingAnchor, setIsDraggingAnchor,
 	getDraggingAnchorInfo, setDraggingAnchorInfo,
-	getCanvas, getCamera
+	getCanvas, getCtx, getCamera
 } from '../core/state.js';
 import { redrawCanvas, drawStroke, isPointNearStroke, getStrokeBounds } from '../canvas/renderer.js';
 import {
@@ -41,6 +41,41 @@ import { findAnchorAtPoint, onAnchorDrag } from '../canvas/anchors.js';
 let hasPenInput = false;
 // Track the active pointer (prevents multi-touch glitches)
 let activePointerId = null;
+
+// ============ RAF-batched rendering ============
+// Gate high-frequency pointermove redraws to one per animation frame.
+let rafId = null;
+
+function scheduleRedraw() {
+	if (rafId !== null) return;
+	rafId = requestAnimationFrame(() => {
+		rafId = null;
+		redrawCanvas();
+		// Draw in-progress stroke on top (PEN tool only)
+		const stroke = getCurrentStroke();
+		if (stroke) {
+			const ctx = getCtx();
+			const camera = getCamera();
+			ctx.save();
+			ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
+			ctx.scale(camera.zoom, camera.zoom);
+			drawStroke(ctx, stroke, camera);
+			ctx.restore();
+		}
+	});
+}
+
+// ============ Coalesced events helpers ============
+// Minimum distance (world units) between consecutive points.
+// Filters sub-pixel noise while preserving visible detail.
+// Tune higher if zoomed detail feels too coarse.
+const MIN_POINT_SPACING = 1.5;
+
+function worldDistance(a, b) {
+	const dx = a.x - b.x;
+	const dy = a.y - b.y;
+	return Math.sqrt(dx * dx + dy * dy);
+}
 
 // ============ Canvas event setup ============
 
@@ -214,7 +249,7 @@ function onPointerMove(e) {
 			const stroke = strokes[info.strokeIdx];
 			if (stroke) {
 				onAnchorDrag(stroke, info.anchorId, pos, info);
-				redrawCanvas();
+				scheduleRedraw();
 				updatePropertyPanel();
 			}
 			return;
@@ -226,7 +261,7 @@ function onPointerMove(e) {
 			const dy = pos.y - start.y;
 			moveSelectedStrokes(dx, dy);
 			setDragStartPos(pos);
-			redrawCanvas();
+			scheduleRedraw();
 			updatePropertyPanel();
 			return;
 		}
@@ -234,7 +269,7 @@ function onPointerMove(e) {
 		if (getIsSelecting() && getSelectionRect()) {
 			const rect = getSelectionRect();
 			setSelectionRect({ ...rect, x2: pos.screenX, y2: pos.screenY });
-			redrawCanvas();
+			scheduleRedraw();
 			return;
 		}
 		return;
@@ -246,16 +281,15 @@ function onPointerMove(e) {
 		eraseAtPoint(pos);
 	} else if (getCurrentTool() === TOOLS.PEN && getCurrentStroke()) {
 		const stroke = getCurrentStroke();
-		stroke.points.push(pos);
-
-		redrawCanvas();
-		const ctx = getCanvas().getContext('2d');
-		const camera = getCamera();
-		ctx.save();
-		ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
-		ctx.scale(camera.zoom, camera.zoom);
-		drawStroke(ctx, stroke, camera);
-		ctx.restore();
+		const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+		for (const ce of events) {
+			const pt = getPointerPos(ce);
+			const lastPt = stroke.points[stroke.points.length - 1];
+			if (!lastPt || worldDistance(lastPt, pt) >= MIN_POINT_SPACING) {
+				stroke.points.push(pt);
+			}
+		}
+		scheduleRedraw();
 	}
 }
 
@@ -320,6 +354,8 @@ function onPointerUp(e) {
 		showConversionPopup(currentStroke, screenX, screenY);
 	}
 
+	// Clear in-progress stroke BEFORE any pending RAF fires.
+	// scheduleRedraw()'s callback checks getCurrentStroke() and gracefully handles null.
 	setCurrentStroke(null);
 	redrawCanvas();
 }
@@ -366,7 +402,7 @@ function eraseAtPoint(pos) {
 
 	if (remainingStrokes.length !== strokes.length) {
 		setStrokes(remainingStrokes);
-		redrawCanvas();
+		scheduleRedraw();
 	}
 }
 
