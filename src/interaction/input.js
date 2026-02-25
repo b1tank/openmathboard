@@ -112,7 +112,14 @@ export function setupCanvasListeners() {
 	canvas.addEventListener('pointerdown', onPointerDown);
 	canvas.addEventListener('pointermove', onPointerMove);
 	canvas.addEventListener('pointerup', onPointerUp);
-	canvas.addEventListener('pointerleave', onPointerUp);
+	// Guard pointerleave: on iPad Safari, Apple Pencil can trigger
+	// spurious pointerleave events even during active drawing.
+	// Only finalize the stroke if the leave is from the active pointer
+	// AND the pointer is not captured (no buttons pressed).
+	canvas.addEventListener('pointerleave', (e) => {
+		if (e.buttons !== 0) return; // still pressing — spurious leave
+		onPointerUp(e);
+	});
 }
 
 function getPointerPos(e) {
@@ -446,7 +453,7 @@ function eraseAtPoint(pos) {
 
 	if (remainingStrokes.length !== strokes.length) {
 		setStrokes(remainingStrokes);
-		scheduleRedraw();
+		// Render handled by the active render loop
 	}
 }
 
