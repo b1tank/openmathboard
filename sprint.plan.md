@@ -75,41 +75,41 @@ Ship in two phases to control risk.
 ## P1 (Gated) — Task 4: Offscreen cache for committed strokes
 **File:** `src/canvas/renderer.js`
 
-- [ ] Implement cache primitives:
-  - [ ] `offscreenCanvas`, `offscreenCtx`, `cacheValid`, `cachedCamera`, `cachedStrokesLength`.
-  - [ ] `invalidateCache()` export.
-  - [ ] `ensureOffscreen(width, height)` with fallback if `OffscreenCanvas` unavailable.
-- [ ] Update `redrawCanvas()`:
-  - [ ] Build committed-strokes cache when invalid/camera changed/stroke count changed.
-  - [ ] Blit cache to visible canvas.
-  - [ ] Draw overlays (selection highlights, anchors, selection-rect) on visible canvas only.
-- [ ] Retire unused dirty API cleanly (`markDirty`) or map it to `invalidateCache`.
+- [x] Implement cache primitives:
+  - [x] `offscreenCanvas`, `offscreenCtx`, `cacheValid`, `cachedCamera`, `cachedStrokesLength`.
+  - [x] `invalidateCache()` export.
+  - [x] `ensureOffscreen(width, height)` with fallback if `OffscreenCanvas` unavailable.
+- [x] Update `redrawCanvas()`:
+  - [x] Build committed-strokes cache when invalid/camera changed/stroke count changed.
+  - [x] Blit cache to visible canvas.
+  - [x] Draw overlays (selection highlights, anchors, selection-rect) on visible canvas only.
+- [x] Retire unused dirty API cleanly (`markDirty`) or map it to `invalidateCache`.
 
 ### Task 4 Required Invalidation Coverage (must be complete)
 
 **Centralized invalidation first (preferred):**
-- [ ] Invalidate in `setStrokes(...)` (`src/core/state.js`) to cover all full-array replacements.
+- [x] Invalidate in `setStrokes(...)` (`src/core/state.js`) to cover all full-array replacements.
 
 **Explicit invalidation for in-place mutation paths:**
-- [ ] `src/interaction/selection.js`
-  - [ ] `moveSelectedStrokes(...)`.
-  - [ ] `deleteSelectedStrokes()`.
-  - [ ] `pasteStrokes()`.
-- [ ] `src/canvas/anchors.js`
-  - [ ] `onAnchorDrag(...)`.
-- [ ] `src/ui/property-panel.js`
-  - [ ] `applyToSelected(...)`.
-- [ ] `src/ui/conversion.js`
-  - [ ] `convertLastStroke(...)`.
-- [ ] `src/interaction/input.js`
-  - [ ] stroke add path in `onPointerUp` (after push/finalize).
-  - [ ] `eraseAtPoint(...)` when stroke set changes.
-- [ ] `src/core/history.js`
-  - [ ] `restoreFromHistory()`.
-- [ ] `src/ui/toolbar.js`
-  - [ ] clear canvas flow (`setStrokes([])`).
-- [ ] `src/core/persistence.js`
-  - [ ] `loadState()` after applying loaded strokes.
+- [x] `src/interaction/selection.js`
+  - [x] `moveSelectedStrokes(...)`.
+  - [x] `deleteSelectedStrokes()`.
+  - [x] `pasteStrokes()`.
+- [x] `src/canvas/anchors.js`
+  - [x] `onAnchorDrag(...)`.
+- [x] `src/ui/property-panel.js`
+  - [x] `applyToSelected(...)`.
+- [x] `src/ui/conversion.js`
+  - [x] `convertLastStroke(...)`.
+- [x] `src/interaction/input.js`
+  - [x] stroke add path in `onPointerUp` (after push/finalize).
+  - [x] `eraseAtPoint(...)` when stroke set changes.
+- [x] `src/core/history.js`
+  - [x] `restoreFromHistory()`.
+- [x] `src/ui/toolbar.js`
+  - [x] clear canvas flow (`setStrokes([])`).
+- [x] `src/core/persistence.js`
+  - [x] `loadState()` after applying loaded strokes.
 
 ---
 
@@ -158,5 +158,8 @@ Ship in two phases to control risk.
 ## Hiccups & Notes
 - Tasks 1+2 committed together (tightly coupled — both modify `onPointerMove` in `input.js`).
 - Build and Playwright tests pass after all changes.
-- Phase 2 (Task 4: offscreen cache) deferred pending iPad validation of Phase 1.
+- Phase 1 alone did not fully resolve dropped strokes / gaps — Phase 2 was triggered.
+- Found and fixed: `pointerup` final point was never captured into the stroke, causing end-of-stroke gaps (pre-existing bug amplified by spacing filter).
+- Centralized cache invalidation via callback in `state.js` avoids circular import between state ↔ renderer.
+- `restoreFromHistory`, `clearCanvas`, `loadState` share invalidation through `setStrokes()` callback — no explicit calls needed.
 
