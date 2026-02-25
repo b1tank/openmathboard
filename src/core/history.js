@@ -18,7 +18,7 @@ export function saveToHistory() {
 
 	// Save current state
 	trimmed.push({
-		strokes: JSON.parse(JSON.stringify(getStrokes())),
+		strokes: structuredClone(getStrokes()),
 	});
 
 	setHistoryStack(trimmed);
@@ -43,7 +43,7 @@ export function redo() {
 
 function restoreFromHistory() {
 	const state = getHistoryStack()[getHistoryIndex()];
-	setStrokes(JSON.parse(JSON.stringify(state.strokes)));
+	setStrokes(structuredClone(state.strokes));
 	setSelectedStrokes([]);
 	redrawCanvas();
 	updateHistoryButtons();
