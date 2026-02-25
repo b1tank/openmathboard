@@ -14,7 +14,7 @@ import {
 	getDraggingAnchorInfo, setDraggingAnchorInfo,
 	getCanvas, getCtx, getCamera
 } from '../core/state.js';
-import { redrawCanvas, drawStroke, isPointNearStroke, getStrokeBounds } from '../canvas/renderer.js';
+import { redrawCanvas, drawStroke, isPointNearStroke, getStrokeBounds, invalidateCache } from '../canvas/renderer.js';
 import {
 	findStrokeAtPoint, findStrokesInRect,
 	moveSelectedStrokes, clearSelection, updateSelectionCursor,
@@ -343,7 +343,16 @@ function onPointerUp(e) {
 
 	const currentStroke = getCurrentStroke();
 	if (getCurrentTool() === TOOLS.PEN && currentStroke && currentStroke.points.length > 1) {
+		// Capture the final lift-point so the stroke doesn't end short
+		if (e) {
+			const finalPt = getPointerPos(e);
+			const lastPt = currentStroke.points[currentStroke.points.length - 1];
+			if (!lastPt || worldDistance(lastPt, finalPt) >= MIN_POINT_SPACING) {
+				currentStroke.points.push(finalPt);
+			}
+		}
 		getStrokes().push(currentStroke);
+		invalidateCache();
 		saveToHistory();
 
 		// Show conversion popup if shapes detected
