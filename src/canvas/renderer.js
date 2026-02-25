@@ -53,8 +53,11 @@ setInvalidateCacheFn(invalidateCache);
 
 function ensureOffscreen(width, height) {
 	if (typeof OffscreenCanvas === 'undefined') return false;
-	if (!offscreenCanvas || offscreenCanvas.width !== width || offscreenCanvas.height !== height) {
-		offscreenCanvas = new OffscreenCanvas(width, height);
+	const dpr = window.devicePixelRatio || 1;
+	const pw = Math.round(width * dpr);
+	const ph = Math.round(height * dpr);
+	if (!offscreenCanvas || offscreenCanvas.width !== pw || offscreenCanvas.height !== ph) {
+		offscreenCanvas = new OffscreenCanvas(pw, ph);
 		offscreenCtx = offscreenCanvas.getContext('2d');
 		cacheValid = false;
 	}
@@ -73,24 +76,30 @@ export function redrawCanvas() {
 	const useCache = ensureOffscreen(rect.width, rect.height);
 
 	if (useCache) {
+		const dpr = window.devicePixelRatio || 1;
 		// Check if cache is still valid
 		const cameraChanged = camera.x !== cachedCamera.x || camera.y !== cachedCamera.y || camera.zoom !== cachedCamera.zoom;
 		if (!cacheValid || cameraChanged || strokes.length !== cachedStrokesLength) {
+			// Render committed strokes at full DPR resolution
+			offscreenCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 			offscreenCtx.clearRect(0, 0, rect.width, rect.height);
-			offscreenCtx.save();
 			offscreenCtx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
 			offscreenCtx.scale(camera.zoom, camera.zoom);
 			for (let i = 0; i < strokes.length; i++) {
 				drawStroke(offscreenCtx, strokes[i], camera);
 			}
-			offscreenCtx.restore();
+			offscreenCtx.setTransform(1, 0, 0, 1, 0, 0);
 			cachedCamera = { ...camera };
 			cachedStrokesLength = strokes.length;
 			cacheValid = true;
 		}
 
-		ctx.clearRect(0, 0, rect.width, rect.height);
+		// Blit at pixel level (bypass DPR transform for 1:1 copy)
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 		ctx.drawImage(offscreenCanvas, 0, 0);
+		ctx.restore();
 	} else {
 		// Fallback: no OffscreenCanvas support
 		ctx.clearRect(0, 0, rect.width, rect.height);
