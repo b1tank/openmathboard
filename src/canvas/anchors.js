@@ -11,7 +11,7 @@
 //   Freehand:   stretch-n/s/e/w + rotation
 
 import { getCamera } from '../core/state.js';
-import { getStrokeBounds } from './renderer.js';
+import { getStrokeBounds, invalidateCache } from './renderer.js';
 
 const ANCHOR_SIZE = 12;
 const HIT_THRESHOLD = 28; // screen pixels — large for touch targets
@@ -163,6 +163,7 @@ function getShapeAnchors(obj) {
 
 export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 	if (!obj) return;
+	invalidateCache();
 
 	// Rotation (any shape including freehand)
 	if (anchorId === 'rotation') {

@@ -4,7 +4,7 @@ import {
 	detectLine, detectCircle,
 	getSmartShapeParams, simplifyStrokePoints, getBounds, generateCirclePoints
 } from '../interaction/detection.js';
-import { redrawCanvas } from '../canvas/renderer.js';
+import { redrawCanvas, invalidateCache } from '../canvas/renderer.js';
 import { saveToHistory } from '../core/history.js';
 import { t } from '../i18n/i18n.js';
 
@@ -113,6 +113,7 @@ function convertLastStroke(shapeType, candidates) {
 		};
 	}
 
+	invalidateCache();
 	redrawCanvas();
 	saveToHistory();
 }

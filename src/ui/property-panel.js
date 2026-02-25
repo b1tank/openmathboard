@@ -3,7 +3,7 @@
 import {
 	getStrokes, getSelectedStrokes, getCamera
 } from '../core/state.js';
-import { redrawCanvas, getStrokeBounds } from '../canvas/renderer.js';
+import { redrawCanvas, getStrokeBounds, invalidateCache } from '../canvas/renderer.js';
 import { saveToHistory } from '../core/history.js';
 import { deleteSelectedStrokes } from '../interaction/selection.js';
 
@@ -55,6 +55,7 @@ function applyToSelected(fn) {
 		if (strokes[idx]) fn(strokes[idx]);
 	}
 	highlightCurrentState();
+	invalidateCache();
 	redrawCanvas();
 	saveToHistory();
 }

@@ -1,7 +1,7 @@
 // OpenMathBoard — Canvas renderer with shape registry
 import {
 	getStrokes, getSelectedStrokes, getIsSelecting, getSelectionRect,
-	getCanvasRect, getCtx, getCamera
+	getCanvasRect, getCtx, getCamera, setInvalidateCacheFn
 } from '../core/state.js';
 import { renderFreehand } from '../shapes/freehand.js';
 import { renderLine } from '../shapes/line.js';
@@ -39,6 +39,28 @@ let dirty = true;
 
 export function markDirty() { dirty = true; }
 
+// ============ Offscreen cache for committed strokes ============
+let offscreenCanvas = null;
+let offscreenCtx = null;
+let cacheValid = false;
+let cachedCamera = { x: 0, y: 0, zoom: 1 };
+let cachedStrokesLength = 0;
+
+export function invalidateCache() { cacheValid = false; }
+
+// Register with state so setStrokes() auto-invalidates
+setInvalidateCacheFn(invalidateCache);
+
+function ensureOffscreen(width, height) {
+	if (typeof OffscreenCanvas === 'undefined') return false;
+	if (!offscreenCanvas || offscreenCanvas.width !== width || offscreenCanvas.height !== height) {
+		offscreenCanvas = new OffscreenCanvas(width, height);
+		offscreenCtx = offscreenCanvas.getContext('2d');
+		cacheValid = false;
+	}
+	return true;
+}
+
 // ============ Main render ============
 
 export function redrawCanvas() {
@@ -46,21 +68,40 @@ export function redrawCanvas() {
 	const rect = getCanvasRect();
 	if (!ctx || !rect) return;
 
-	ctx.clearRect(0, 0, rect.width, rect.height);
-
 	const camera = getCamera();
 	const strokes = getStrokes();
+	const useCache = ensureOffscreen(rect.width, rect.height);
 
-	ctx.save();
-	ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
-	ctx.scale(camera.zoom, camera.zoom);
+	if (useCache) {
+		// Check if cache is still valid
+		const cameraChanged = camera.x !== cachedCamera.x || camera.y !== cachedCamera.y || camera.zoom !== cachedCamera.zoom;
+		if (!cacheValid || cameraChanged || strokes.length !== cachedStrokesLength) {
+			offscreenCtx.clearRect(0, 0, rect.width, rect.height);
+			offscreenCtx.save();
+			offscreenCtx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
+			offscreenCtx.scale(camera.zoom, camera.zoom);
+			for (let i = 0; i < strokes.length; i++) {
+				drawStroke(offscreenCtx, strokes[i], camera);
+			}
+			offscreenCtx.restore();
+			cachedCamera = { ...camera };
+			cachedStrokesLength = strokes.length;
+			cacheValid = true;
+		}
 
-	// Draw all strokes
-	for (let i = 0; i < strokes.length; i++) {
-		drawStroke(ctx, strokes[i], camera);
+		ctx.clearRect(0, 0, rect.width, rect.height);
+		ctx.drawImage(offscreenCanvas, 0, 0);
+	} else {
+		// Fallback: no OffscreenCanvas support
+		ctx.clearRect(0, 0, rect.width, rect.height);
+		ctx.save();
+		ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
+		ctx.scale(camera.zoom, camera.zoom);
+		for (let i = 0; i < strokes.length; i++) {
+			drawStroke(ctx, strokes[i], camera);
+		}
+		ctx.restore();
 	}
-
-	ctx.restore();
 
 	// Draw selection highlights + anchors (in screen space)
 	const selected = getSelectedStrokes();

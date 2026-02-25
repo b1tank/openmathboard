@@ -7,7 +7,7 @@ import {
 	setDragStartPos, getClipboardStrokes, setClipboardStrokes,
 	getCurrentTool, getDomRefs
 } from '../core/state.js';
-import { redrawCanvas, getStrokeBounds, isPointNearStroke } from '../canvas/renderer.js';
+import { redrawCanvas, getStrokeBounds, isPointNearStroke, invalidateCache } from '../canvas/renderer.js';
 import { saveToHistory } from '../core/history.js';
 import { t } from '../i18n/i18n.js';
 import { showToast } from '../ui/toast.js';
@@ -131,6 +131,7 @@ export function moveSelectedStrokes(dx, dy) {
 			}
 		}
 	}
+	invalidateCache();
 }
 
 export function deleteSelectedStrokes() {
@@ -143,6 +144,7 @@ export function deleteSelectedStrokes() {
 		strokes.splice(idx, 1);
 	}
 	setSelectedStrokes([]);
+	invalidateCache();
 	redrawCanvas();
 	saveToHistory();
 }
@@ -210,6 +212,7 @@ export function pasteStrokes() {
 	setSelectedStrokes(newStrokes.map((_, i) => startIdx + i));
 
 	updateSelectionCursor();
+	invalidateCache();
 	redrawCanvas();
 	saveToHistory();
 	showToast(t('toastPasted'), 'success');

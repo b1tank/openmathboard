@@ -1,5 +1,10 @@
 // OpenMathBoard — Centralized state management
 
+// Cache invalidation callback — set by renderer to avoid circular import
+let _invalidateCache = null;
+export function setInvalidateCacheFn(fn) { _invalidateCache = fn; }
+function notifyCacheInvalid() { if (_invalidateCache) _invalidateCache(); }
+
 // ============ Constants ============
 export const TOOLS = {
 	PEN: 'pen',
@@ -94,7 +99,7 @@ export function setCurrentStrokeWidth(v) { currentStrokeWidth = v; }
 export function setCurrentDash(v) { currentDash = v; }
 export function setIsDrawing(v) { isDrawing = v; }
 export function setCurrentStroke(v) { currentStroke = v; }
-export function setStrokes(v) { strokes = v; }
+export function setStrokes(v) { strokes = v; notifyCacheInvalid(); }
 export function setHistoryStack(v) { historyStack = v; }
 export function setHistoryIndex(v) { historyIndex = v; }
 export function setCanvas(v) { canvas = v; }
