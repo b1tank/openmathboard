@@ -1,165 +1,71 @@
-# Sprint Plan — iPad Apple Pencil Rendering Stability
+# Sprint Plan — Architecture Sprint 1: Input/Render Decoupling
 
 ## Objective
-Eliminate dropped/missing strokes on iPad (Apple Pencil) by reducing pointermove render pressure, preserving high-frequency points, and cutting history-clone spikes.
+Active pen drawing no longer triggers full committed-scene replay. Input is decoupled from rendering via a two-canvas architecture and a centralized input manager.
 
 ## Scope
-- In scope: `src/interaction/input.js`, `src/core/history.js`, `src/canvas/renderer.js` (gated), plus required cache invalidation call sites.
-- Out of scope: worker-based rendering, tile cache system, major stroke data-structure rewrite.
+- In scope: `index.html`, `style.css`, `src/core/state.js`, `src/interaction/input.js`, `src/canvas/renderer.js`, `src/app.js`, plus new files `src/interaction/input-manager.js` and `src/interaction/pen-tool.js`.
+- Out of scope: eraser/select tool extraction (Sprint 2), gesture unification (Sprint 2), iPad instrumentation (Sprint 3).
 
-## Success Criteria (must pass)
-- No missing strokes in rapid lift-and-tap sequence (10+ consecutive strokes).
-- Smooth fast handwriting without visible gaps.
-- No regressions in select/drag/anchor/eraser interactions.
-- `npx playwright test` passes.
+## Success Criteria
+- Active pen drawing renders only on the live canvas — scene canvas redraw count during drawing: 0.
+- All existing Playwright tests pass.
+- All existing features still work (eraser, select, shapes, toolbar, etc.).
 
 ## Delivery Strategy
-Ship in two phases to control risk.
-
-### Phase 1 (mandatory)
-1. RAF-batched pointermove redraws.
-2. Coalesced Pencil events + point spacing filter.
-3. Replace JSON history clone with `structuredClone`.
-
-### Phase 2 (conditional)
-4. Offscreen committed-strokes cache.
-
-**Go/No-Go Gate for Phase 2**
-- Run Phase 1 verification on iPad.
-- Only implement Phase 2 if missing strokes or unacceptable drawing latency still reproduces.
+Ship in atomic commits. Each step produces a working app.
 
 ---
 
-## Actionable Implementation Checklist
+## Actionable Task List
 
-## P0 — Task 1: RAF-batch all pointermove redraws
-**File:** `src/interaction/input.js`
+### Task 1: Add liveCanvas to DOM and CSS
+- [ ] Add `<canvas id="liveCanvas"></canvas>` after `drawingCanvas` in `index.html`
+- [ ] Add CSS for `#liveCanvas` — same positioning as `#drawingCanvas`, z-index above it
+- [ ] `#drawingCanvas` gets `pointer-events: none` (scene canvas); live canvas receives all pointer events
 
-- [x] Add module-level RAF scheduler:
-  - [x] `let rafId = null`.
-  - [x] `scheduleRedraw()` that gates to one `requestAnimationFrame` callback.
-  - [x] In callback: call `redrawCanvas()`; if `getCurrentStroke()` exists, draw in-progress stroke overlay using `getCtx()`.
-- [x] Replace pointermove synchronous redraw sites with `scheduleRedraw()`:
-  - [x] anchor drag path.
-  - [x] selection drag path.
-  - [x] selection-rect path.
-  - [x] PEN path (remove direct `getCanvas().getContext('2d')` draw block).
-  - [x] eraser path (`eraseAtPoint` should schedule, not redraw synchronously).
-- [x] Keep discrete-action redraws synchronous:
-  - [x] click-to-select in `onPointerDown`.
-  - [x] selection finalize in `onPointerUp`.
-  - [x] end-of-stroke finalize in `onPointerUp`.
-- [x] Add invariant comment near `setCurrentStroke(null)` in `onPointerUp`:
-  - Clear current stroke before pending RAF callback runs; callback must tolerate `null`.
+### Task 2: Add liveCanvas + liveCtx to state.js
+- [ ] Add `liveCanvas`, `liveCtx` state variables with getters/setters
 
-## P0 — Task 2: Coalesced events for PEN path
-**File:** `src/interaction/input.js`
+### Task 3: Create input-manager.js
+- [ ] Single owner of pointer events on liveCanvas
+- [ ] Caches canvas rect on pointerdown + resize
+- [ ] Normalizes events, routes to active tool's `onPointerDown/Move/Up/Cancel`
+- [ ] Handles pointercancel, pointerleave with buttons-check guard
+- [ ] Pen-vs-finger gating: finger ignored when pen detected (unless select tool)
+- [ ] For eraser/select: falls through to legacy `input.js` handlers (temporary stub)
 
-- [x] Add helper constant and distance utility:
-  - [x] `const MIN_POINT_SPACING = 1.5` (world units).
-  - [x] `worldDistance(a, b)`.
-- [x] In PEN `onPointerMove` branch:
-  - [x] Read `const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]`.
-  - [x] Push points from each event through spacing filter.
-  - [x] Preserve pressure via existing `getPointerPos(ce)` path.
-  - [x] Use `scheduleRedraw()` (from Task 1).
-- [x] Add tuning note in code comment: spacing is intentionally configurable if zoomed detail feels too coarse.
+### Task 4: Create pen-tool.js
+- [ ] Extracts pen logic from `input.js` onPointerDown/Move/Up
+- [ ] Zoom-aware point spacing
+- [ ] Renders active stroke on live canvas only
+- [ ] On pointerup: commits to strokes[], invalidates scene cache, defers history
+- [ ] On cancel: discards cleanly
 
-## P0 — Task 3: History clone optimization
-**File:** `src/core/history.js`
+### Task 5: Split renderer into scene/live
+- [ ] `redrawScene()` — committed strokes on scene canvas (existing offscreen cache)
+- [ ] `redrawLive()` — live canvas: current stroke + selection overlays + anchors
+- [ ] `redrawCanvas()` — backward-compatible wrapper calling both
+- [ ] Render loop during pen drawing calls `redrawLive()` only
 
-- [x] Replace `JSON.parse(JSON.stringify(...))` with `structuredClone(...)` in `saveToHistory()`.
-- [x] Replace `JSON.parse(JSON.stringify(...))` with `structuredClone(...)` in `restoreFromHistory()`.
-- [x] Keep behavior/order unchanged (`updateHistoryButtons`, `scheduleSave`, selection reset).
+### Task 6: Wire app.js to new modules
+- [ ] Initialize liveCanvas + liveCtx in init()
+- [ ] Call `setupInputManager()` instead of `setupCanvasListeners()`
+- [ ] Resize both canvases in `resizeCanvas()`
+- [ ] Keep `setupCanvasListeners()` for keyboard shortcuts only
 
-## P1 (Gated) — Task 4: Offscreen cache for committed strokes
-**File:** `src/canvas/renderer.js`
+### Task 7: Stub eraser/select in input-manager
+- [ ] Eraser/select pointer events forwarded to legacy `input.js` handlers
+- [ ] Legacy handlers still work unchanged until Sprint 2 extracts them
 
-- [x] Implement cache primitives:
-  - [x] `offscreenCanvas`, `offscreenCtx`, `cacheValid`, `cachedCamera`, `cachedStrokesLength`.
-  - [x] `invalidateCache()` export.
-  - [x] `ensureOffscreen(width, height)` with fallback if `OffscreenCanvas` unavailable.
-- [x] Update `redrawCanvas()`:
-  - [x] Build committed-strokes cache when invalid/camera changed/stroke count changed.
-  - [x] Blit cache to visible canvas.
-  - [x] Draw overlays (selection highlights, anchors, selection-rect) on visible canvas only.
-- [x] Retire unused dirty API cleanly (`markDirty`) or map it to `invalidateCache`.
+### Task 8: Build check + run tests
+- [ ] `npx vite build` succeeds
+- [ ] `npx playwright test` passes
 
-### Task 4 Required Invalidation Coverage (must be complete)
-
-**Centralized invalidation first (preferred):**
-- [x] Invalidate in `setStrokes(...)` (`src/core/state.js`) to cover all full-array replacements.
-
-**Explicit invalidation for in-place mutation paths:**
-- [x] `src/interaction/selection.js`
-  - [x] `moveSelectedStrokes(...)`.
-  - [x] `deleteSelectedStrokes()`.
-  - [x] `pasteStrokes()`.
-- [x] `src/canvas/anchors.js`
-  - [x] `onAnchorDrag(...)`.
-- [x] `src/ui/property-panel.js`
-  - [x] `applyToSelected(...)`.
-- [x] `src/ui/conversion.js`
-  - [x] `convertLastStroke(...)`.
-- [x] `src/interaction/input.js`
-  - [x] stroke add path in `onPointerUp` (after push/finalize).
-  - [x] `eraseAtPoint(...)` when stroke set changes.
-- [x] `src/core/history.js`
-  - [x] `restoreFromHistory()`.
-- [x] `src/ui/toolbar.js`
-  - [x] clear canvas flow (`setStrokes([])`).
-- [x] `src/core/persistence.js`
-  - [x] `loadState()` after applying loaded strokes.
+### Task 9: Push all commits
+- [ ] `git push` to current branch
 
 ---
-
-## Test Checklist (execution-ready)
-
-## A. Functional regressions
-- [ ] Anchor drag remains smooth.
-- [ ] Selection drag tracks pointer without jump.
-- [ ] Selection rectangle updates smoothly.
-- [ ] Eraser scribble removes targeted strokes reliably.
-- [ ] Undo/redo correctness after draw, move, erase, convert.
-
-## B. iPad/Pencil validation
-- [ ] Rapid lift-and-tap: 10+ strokes, none missing.
-- [ ] Fast cursive writing: no visible gaps.
-- [ ] Zoomed detail (5×): spacing does not over-filter.
-
-## C. Cache-specific (Phase 2 only)
-- [ ] Undo invalidates cache correctly.
-- [ ] Erase invalidates cache correctly.
-- [ ] Property edits invalidate cache correctly.
-- [ ] Conversion popup replacement invalidates cache correctly.
-- [ ] Pan/zoom and resize show no stale artifacts.
-
-## D. Automation
-- [x] Run `npx playwright test`.
-
----
-
-## Implementation Order
-1. Task 1 (RAF batching)
-2. Task 2 (coalesced events)
-3. Task 3 (history clone optimization)
-4. Run validation checklist A/B/D
-5. Decide Phase 2 with Go/No-Go gate
-6. If needed, implement Task 4 and checklist C
-
-## Risks & Mitigations
-- Risk: stale cache due to missed invalidation.
-  - Mitigation: centralized invalidation in `setStrokes` + explicit checklist above.
-- Risk: over-filtered points at high zoom.
-  - Mitigation: tune `MIN_POINT_SPACING` after iPad validation.
-- Risk: unnecessary complexity if Phase 1 already solves issue.
-  - Mitigation: strict Phase 2 gate.
 
 ## Hiccups & Notes
-- Tasks 1+2 committed together (tightly coupled — both modify `onPointerMove` in `input.js`).
-- Build and Playwright tests pass after all changes.
-- Phase 1 alone did not fully resolve dropped strokes / gaps — Phase 2 was triggered.
-- Found and fixed: `pointerup` final point was never captured into the stroke, causing end-of-stroke gaps (pre-existing bug amplified by spacing filter).
-- Centralized cache invalidation via callback in `state.js` avoids circular import between state ↔ renderer.
-- `restoreFromHistory`, `clearCanvas`, `loadState` share invalidation through `setStrokes()` callback — no explicit calls needed.
-
+- (filled in during execution)
