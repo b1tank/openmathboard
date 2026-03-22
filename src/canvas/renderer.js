@@ -1,7 +1,8 @@
 // OpenMathBoard — Canvas renderer with shape registry
 import {
 	getStrokes, getSelectedStrokes, getIsSelecting, getSelectionRect,
-	getCanvasRect, getCtx, getCamera, setInvalidateCacheFn
+	getCanvasRect, getCtx, getCamera, setInvalidateCacheFn,
+	getLiveCtx, getCurrentStroke
 } from '../core/state.js';
 import { renderFreehand } from '../shapes/freehand.js';
 import { renderLine } from '../shapes/line.js';
@@ -64,9 +65,9 @@ function ensureOffscreen(width, height) {
 	return true;
 }
 
-// ============ Main render ============
+// ============ Main render — scene canvas ============
 
-export function redrawCanvas() {
+export function redrawScene() {
 	const ctx = getCtx();
 	const rect = getCanvasRect();
 	if (!ctx || !rect) return;
@@ -77,10 +78,8 @@ export function redrawCanvas() {
 
 	if (useCache) {
 		const dpr = window.devicePixelRatio || 1;
-		// Check if cache is still valid
 		const cameraChanged = camera.x !== cachedCamera.x || camera.y !== cachedCamera.y || camera.zoom !== cachedCamera.zoom;
 		if (!cacheValid || cameraChanged || strokes.length !== cachedStrokesLength) {
-			// Render committed strokes at full DPR resolution
 			offscreenCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 			offscreenCtx.clearRect(0, 0, rect.width, rect.height);
 			offscreenCtx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
@@ -94,14 +93,12 @@ export function redrawCanvas() {
 			cacheValid = true;
 		}
 
-		// Blit at pixel level (bypass DPR transform for 1:1 copy)
 		ctx.save();
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 		ctx.drawImage(offscreenCanvas, 0, 0);
 		ctx.restore();
 	} else {
-		// Fallback: no OffscreenCanvas support
 		ctx.clearRect(0, 0, rect.width, rect.height);
 		ctx.save();
 		ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
@@ -111,24 +108,58 @@ export function redrawCanvas() {
 		}
 		ctx.restore();
 	}
+}
 
-	// Draw selection highlights + anchors (in screen space)
+// ============ Live canvas — overlays ============
+
+export function redrawLive() {
+	const liveCtx = getLiveCtx();
+	const rect = getCanvasRect();
+	if (!liveCtx || !rect) return;
+
+	const camera = getCamera();
+	const strokes = getStrokes();
+	const dpr = window.devicePixelRatio || 1;
+
+	// Clear entire live canvas
+	liveCtx.save();
+	liveCtx.setTransform(1, 0, 0, 1, 0, 0);
+	liveCtx.clearRect(0, 0, rect.width * dpr, rect.height * dpr);
+	liveCtx.restore();
+
+	// Draw in-progress stroke
+	const currentStroke = getCurrentStroke();
+	if (currentStroke) {
+		liveCtx.save();
+		liveCtx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
+		liveCtx.scale(camera.zoom, camera.zoom);
+		drawStroke(liveCtx, currentStroke, camera);
+		liveCtx.restore();
+	}
+
+	// Draw selection highlights + anchors
 	const selected = getSelectedStrokes();
 	if (selected.length > 0) {
-		drawSelectionHighlights(ctx, strokes, selected, camera);
-		// Draw anchors for selected strokes (shapes get special+general, freehand gets general only)
+		drawSelectionHighlights(liveCtx, strokes, selected, camera);
 		for (const idx of selected) {
 			const stroke = strokes[idx];
 			if (stroke) {
-				renderAnchors(ctx, stroke, camera);
+				renderAnchors(liveCtx, stroke, camera);
 			}
 		}
 	}
 
 	// Draw selection rectangle while dragging
 	if (getIsSelecting() && getSelectionRect()) {
-		drawSelectionRect(ctx, getSelectionRect());
+		drawSelectionRect(liveCtx, getSelectionRect());
 	}
+}
+
+// ============ Backward-compatible wrapper ============
+
+export function redrawCanvas() {
+	redrawScene();
+	redrawLive();
 }
 
 // ============ Stroke drawing ============
