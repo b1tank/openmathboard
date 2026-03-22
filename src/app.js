@@ -16,11 +16,14 @@ import { initI18n, applyTranslations, setupLanguagePicker } from './i18n/i18n.js
 import {
 	TOOLS,
 	setCanvas, setCtx, setCanvasRect, setDomRefs,
+	setLiveCanvas, setLiveCtx,
 	getCanvas, getCtx, getCanvasRect, getDomRefs,
+	getLiveCanvas, getLiveCtx,
 	getStrokes
 } from './core/state.js';
 import { redrawCanvas } from './canvas/renderer.js';
-import { setupCanvasListeners, setupKeyboardShortcuts } from './interaction/input.js';
+import { setupCanvasListeners, setupKeyboardShortcuts, legacyPointerDown, legacyPointerMove, legacyPointerUp } from './interaction/input.js';
+import { setupInputManager, setLegacyHandlers, invalidateCachedRect } from './interaction/input-manager.js';
 import { setupToolbarListeners } from './ui/toolbar.js';
 import { setupDropZone, setupClipboard } from './ui/images.js';
 import { setTool } from './interaction/tools.js';
@@ -46,6 +49,11 @@ function init() {
 	const canvas = document.getElementById('drawingCanvas');
 	setCanvas(canvas);
 	setCtx(canvas.getContext('2d'));
+
+	// Live canvas (overlay for active interactions)
+	const liveCanvasEl = document.getElementById('liveCanvas');
+	setLiveCanvas(liveCanvasEl);
+	setLiveCtx(liveCanvasEl.getContext('2d'));
 
 	// DOM refs
 	const refs = {
@@ -95,13 +103,16 @@ function init() {
 
 	// Setup modules
 	setupToolbarListeners();
-	setupCanvasListeners();
+	setupCanvasListeners(); // now a no-op for pointer events; kept for compat
+	setupInputManager(); // new: single owner of pointer events on liveCanvas
+	// Bridge legacy eraser/select handlers until Sprint 2 extracts them
+	setLegacyHandlers(legacyPointerDown, legacyPointerMove, legacyPointerUp);
 	setupDropZone();
 	setupClipboard();
 	setupKeyboardShortcuts();
 
 	// Camera: zoom/pan
-	const canvasEl = getCanvas();
+	const canvasEl = getLiveCanvas(); // pointer events go to live canvas
 	setupWheelZoom(canvasEl, () => redrawCanvas());
 	setupPinchZoom(canvasEl, () => redrawCanvas());
 	setupSpacebarPan(canvasEl, () => redrawCanvas());
@@ -146,17 +157,28 @@ function setupCanvas() {
 function resizeCanvas() {
 	const canvas = getCanvas();
 	const ctx = getCtx();
+	const liveCanvasEl = getLiveCanvas();
+	const liveCtx = getLiveCtx();
 	const refs = getDomRefs();
 	const dpr = window.devicePixelRatio || 1;
 	const rect = refs.canvasContainer.getBoundingClientRect();
 
+	// Scene canvas
 	canvas.width = rect.width * dpr;
 	canvas.height = rect.height * dpr;
 	canvas.style.width = rect.width + 'px';
 	canvas.style.height = rect.height + 'px';
-
 	ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+	// Live canvas
+	liveCanvasEl.width = rect.width * dpr;
+	liveCanvasEl.height = rect.height * dpr;
+	liveCanvasEl.style.width = rect.width + 'px';
+	liveCanvasEl.style.height = rect.height + 'px';
+	liveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
 	setCanvasRect(rect);
+	invalidateCachedRect();
 
 	redrawCanvas();
 }

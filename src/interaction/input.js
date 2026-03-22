@@ -108,19 +108,15 @@ function worldDistance(a, b) {
 // ============ Canvas event setup ============
 
 export function setupCanvasListeners() {
-	const canvas = getCanvas();
-	canvas.addEventListener('pointerdown', onPointerDown);
-	canvas.addEventListener('pointermove', onPointerMove);
-	canvas.addEventListener('pointerup', onPointerUp);
-	// Guard pointerleave: on iPad Safari, Apple Pencil can trigger
-	// spurious pointerleave events even during active drawing.
-	// Only finalize the stroke if the leave is from the active pointer
-	// AND the pointer is not captured (no buttons pressed).
-	canvas.addEventListener('pointerleave', (e) => {
-		if (e.buttons !== 0) return; // still pressing — spurious leave
-		onPointerUp(e);
-	});
+	// Pointer events are now owned by input-manager.js.
+	// This function is kept for backward compatibility but only sets up
+	// the legacy bridge so eraser/select still work during Sprint 1.
 }
+
+// Legacy handlers — called by input-manager.js for eraser/select tools
+export { onPointerDown as legacyPointerDown };
+export { onPointerMove as legacyPointerMove };
+export { onPointerUp as legacyPointerUp };
 
 function getPointerPos(e) {
 	const canvas = getCanvas();
@@ -162,8 +158,7 @@ function onPointerDown(e) {
 		return;
 	}
 
-	const canvas = getCanvas();
-	canvas.setPointerCapture(e.pointerId);
+	// Pointer capture is handled by input-manager.js
 	activePointerId = e.pointerId;
 
 	const pos = getPointerPos(e);
