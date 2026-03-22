@@ -339,8 +339,10 @@
     </div>
     <!-- Imported images layer -->
     <div class="images-layer" id="imagesLayer"></div>
-    <!-- Drawing canvas -->
+    <!-- Scene canvas (committed strokes — no pointer events) -->
     <canvas id="drawingCanvas"></canvas>
+    <!-- Live canvas (active stroke, selection overlays — receives pointer events) -->
+    <canvas id="liveCanvas"></canvas>
     <!-- Drop zone overlay -->
     <div class="drop-zone" id="dropZone">
       <div class="drop-zone-content">
