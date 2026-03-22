@@ -38,6 +38,8 @@ let historyIndex = -1;
 // Canvas state
 let canvas = null;
 let ctx = null;
+let liveCanvas = null;
+let liveCtx = null;
 let canvasRect = null;
 
 // Selection state
@@ -76,6 +78,8 @@ export function getHistoryStack() { return historyStack; }
 export function getHistoryIndex() { return historyIndex; }
 export function getCanvas() { return canvas; }
 export function getCtx() { return ctx; }
+export function getLiveCanvas() { return liveCanvas; }
+export function getLiveCtx() { return liveCtx; }
 export function getCanvasRect() { return canvasRect; }
 export function getSelectedStrokes() { return selectedStrokes; }
 export function getSelectionRect() { return selectionRect; }
@@ -104,6 +108,8 @@ export function setHistoryStack(v) { historyStack = v; }
 export function setHistoryIndex(v) { historyIndex = v; }
 export function setCanvas(v) { canvas = v; }
 export function setCtx(v) { ctx = v; }
+export function setLiveCanvas(v) { liveCanvas = v; }
+export function setLiveCtx(v) { liveCtx = v; }
 export function setCanvasRect(v) { canvasRect = v; }
 export function setSelectedStrokes(v) { selectedStrokes = v; }
 export function setSelectionRect(v) { selectionRect = v; }
