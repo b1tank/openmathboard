@@ -4,6 +4,7 @@ import {
 	getCanvasRect, getCtx, getCamera, setInvalidateCacheFn,
 	getLiveCtx, getCurrentStroke
 } from '../core/state.js';
+import { perfSceneRedraw } from '../core/perf.js';
 import { renderFreehand } from '../shapes/freehand.js';
 import { renderLine } from '../shapes/line.js';
 import { renderCircle } from '../shapes/circle.js';
@@ -68,6 +69,7 @@ function ensureOffscreen(width, height) {
 // ============ Main render — scene canvas ============
 
 export function redrawScene() {
+	perfSceneRedraw();
 	const ctx = getCtx();
 	const rect = getCanvasRect();
 	if (!ctx || !rect) return;

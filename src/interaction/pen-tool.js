@@ -14,6 +14,7 @@ import { redrawScene, redrawLive, drawStroke, invalidateCache } from '../canvas/
 import { saveToHistory } from '../core/history.js';
 import { hideHeroSection } from '../ui/hero.js';
 import { showConversionPopup } from '../ui/conversion.js';
+import { perfReset, perfSampleReceived, perfSampleCommitted, perfFrameStart, perfFrameEnd, perfLogSummary, perfCancel } from '../core/perf.js';
 
 // ============ Render loop ============
 let renderLoopActive = false;
@@ -31,8 +32,9 @@ function stopRenderLoop() {
 function renderLoopTick() {
 	if (!renderLoopActive) return;
 	requestAnimationFrame(() => {
-		// Only redraw the live canvas — scene canvas stays cached
+		perfFrameStart();
 		redrawLive();
+		perfFrameEnd();
 		if (renderLoopActive) renderLoopTick();
 	});
 }
@@ -62,6 +64,7 @@ function getMinSpacing() {
 
 export function onPenPointerDown(pos) {
 	hideHeroSection();
+	perfReset();
 
 	setIsDrawing(true);
 	setCurrentStroke({
@@ -75,6 +78,7 @@ export function onPenPointerDown(pos) {
 
 export function onPenPointerMove(pos) {
 	if (!getIsDrawing()) return;
+	perfSampleReceived();
 
 	const stroke = getCurrentStroke();
 	if (!stroke) return;
@@ -83,6 +87,7 @@ export function onPenPointerMove(pos) {
 	const minSpacing = getMinSpacing();
 	if (!lastPt || worldDistance(lastPt, pos) >= minSpacing) {
 		stroke.points.push(pos);
+		perfSampleCommitted();
 	}
 }
 
@@ -122,6 +127,7 @@ export function onPenPointerUp(pos) {
 		deferWork(() => {
 			saveToHistory();
 			showConversionPopup(currentStroke, screenX, screenY);
+			perfLogSummary();
 		});
 	} else {
 		setCurrentStroke(null);
@@ -135,4 +141,6 @@ export function onPenCancel() {
 	stopRenderLoop();
 	setCurrentStroke(null);
 	redrawLive();
+	perfCancel();
+	perfLogSummary();
 }
