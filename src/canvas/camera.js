@@ -99,75 +99,13 @@ export function setupWheelZoom(canvasEl, onUpdate) {
 	}, { passive: false });
 }
 
-// ============ Pinch zoom state ============
-let activeTouches = new Map();
-
-/**
- * Setup pinch zoom + two-finger pan on touch devices
- */
+// ============ Pinch zoom ============
+// Touch-based pinch handling has been removed.
+// Pinch zoom is now detected via pointer events in input-manager.js
+// and forwarded to zoomAtPoint/panByScreenDelta.
+// setupPinchZoom is kept as a no-op for backward compatibility.
 export function setupPinchZoom(canvasEl, onUpdate) {
-	canvasEl.addEventListener('touchstart', onTouchStart, { passive: false });
-	canvasEl.addEventListener('touchmove', onTouchMove, { passive: false });
-	canvasEl.addEventListener('touchend', onTouchEnd, { passive: false });
-	canvasEl.addEventListener('touchcancel', onTouchEnd, { passive: false });
-
-	function onTouchStart(e) {
-		for (const touch of e.changedTouches) {
-			activeTouches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
-		}
-	}
-
-	function onTouchMove(e) {
-		if (activeTouches.size < 2) return;
-
-		e.preventDefault();
-		const touches = Array.from(e.touches);
-		if (touches.length < 2) return;
-
-		const t1 = touches[0];
-		const t2 = touches[1];
-
-		const prev1 = activeTouches.get(t1.identifier);
-		const prev2 = activeTouches.get(t2.identifier);
-		if (!prev1 || !prev2) return;
-
-		const rect = canvasEl.getBoundingClientRect();
-
-		// Previous and current distances + midpoints
-		const prevDist = Math.hypot(prev1.x - prev2.x, prev1.y - prev2.y);
-		const currDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-
-		const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
-		const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
-
-		const prevMidX = (prev1.x + prev2.x) / 2 - rect.left;
-		const prevMidY = (prev1.y + prev2.y) / 2 - rect.top;
-
-		// Pinch zoom
-		if (prevDist > 0 && currDist > 0) {
-			const factor = currDist / prevDist;
-			zoomAtPoint(midX, midY, factor);
-		}
-
-		// Pan
-		const dx = midX - prevMidX;
-		const dy = midY - prevMidY;
-		if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-			panByScreenDelta(dx, dy);
-		}
-
-		// Update stored positions
-		activeTouches.set(t1.identifier, { x: t1.clientX, y: t1.clientY });
-		activeTouches.set(t2.identifier, { x: t2.clientX, y: t2.clientY });
-
-		if (onUpdate) onUpdate();
-	}
-
-	function onTouchEnd(e) {
-		for (const touch of e.changedTouches) {
-			activeTouches.delete(touch.identifier);
-		}
-	}
+	// No-op: pinch is handled by input-manager via pointer events
 }
 
 // ============ Spacebar pan ============

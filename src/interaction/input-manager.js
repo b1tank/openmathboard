@@ -8,14 +8,20 @@ import {
 	getLiveCanvas, getCanvasRect, setCanvasRect, getCamera,
 	getDomRefs
 } from '../core/state.js';
-import { isSpacebarPanning } from '../canvas/camera.js';
+import { isSpacebarPanning, zoomAtPoint, panByScreenDelta } from '../canvas/camera.js';
 import { onPenPointerDown, onPenPointerMove, onPenPointerUp, onPenCancel } from './pen-tool.js';
 import { onEraserPointerDown, onEraserPointerMove, onEraserPointerUp, onEraserCancel } from './eraser-tool.js';
 import { onSelectPointerDown, onSelectPointerMove, onSelectPointerUp, onSelectCancel } from './select-tool.js';
+import { redrawCanvas } from '../canvas/renderer.js';
 
 // ============ Pen/finger detection ============
 let hasPenInput = false;
 let activePointerId = null;
+
+// ============ Pinch zoom state ============
+// Track all active pointers for multi-touch pinch detection
+let activePointers = new Map(); // pointerId → { x, y } (client coords)
+let isPinching = false;
 
 // Cached canvas rect — updated on pointerdown + resize, never during move
 let cachedRect = null;
@@ -64,6 +70,24 @@ function onPointerDown(e) {
 
 	if (isPen) hasPenInput = true;
 
+	// Track all active pointers for pinch detection
+	if (isFinger) {
+		activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+		// Two fingers → start pinch, cancel any active tool interaction
+		if (activePointers.size >= 2) {
+			if (!isPinching) {
+				isPinching = true;
+				// Cancel any active tool interaction
+				if (activePointerId !== null) {
+					cancelActiveTool();
+					activePointerId = null;
+				}
+			}
+			return;
+		}
+	}
+
 	// Pen-vs-finger gating: when pen has been used, finger only allowed for select
 	if (isFinger && hasPenInput && getCurrentTool() !== TOOLS.SELECT) {
 		return;
@@ -95,6 +119,49 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
+	// Handle pinch zoom/pan (two-finger gesture)
+	if (isPinching && e.pointerType === 'touch') {
+		const prev = activePointers.get(e.pointerId);
+		if (!prev) return;
+
+		const pointerIds = Array.from(activePointers.keys());
+		if (pointerIds.length >= 2) {
+			const otherId = pointerIds.find(id => id !== e.pointerId);
+			const other = activePointers.get(otherId);
+			if (other) {
+				const rect = ensureRect();
+
+				// Previous state
+				const prevDist = Math.hypot(prev.x - other.x, prev.y - other.y);
+				const prevMidX = (prev.x + other.x) / 2 - rect.left;
+				const prevMidY = (prev.y + other.y) / 2 - rect.top;
+
+				// Current state
+				const currDist = Math.hypot(e.clientX - other.x, e.clientY - other.y);
+				const midX = (e.clientX + other.x) / 2 - rect.left;
+				const midY = (e.clientY + other.y) / 2 - rect.top;
+
+				// Pinch zoom
+				if (prevDist > 0 && currDist > 0) {
+					const factor = currDist / prevDist;
+					zoomAtPoint(midX, midY, factor);
+				}
+
+				// Pan
+				const dx = midX - prevMidX;
+				const dy = midY - prevMidY;
+				if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+					panByScreenDelta(dx, dy);
+				}
+
+				redrawCanvas();
+			}
+		}
+
+		activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		return;
+	}
+
 	if (activePointerId !== null && e.pointerId !== activePointerId) return;
 
 	const tool = getCurrentTool();
@@ -117,6 +184,17 @@ function onPointerMove(e) {
 }
 
 function onPointerUp(e) {
+	// Track pointer removal for pinch
+	if (e && e.pointerType === 'touch') {
+		activePointers.delete(e.pointerId);
+		if (isPinching) {
+			if (activePointers.size < 2) {
+				isPinching = false;
+			}
+			return;
+		}
+	}
+
 	if (activePointerId !== null && e && e.pointerId !== activePointerId) return;
 	activePointerId = null;
 
@@ -132,9 +210,7 @@ function onPointerUp(e) {
 	}
 }
 
-function onPointerCancel(e) {
-	activePointerId = null;
-
+function cancelActiveTool() {
 	const tool = getCurrentTool();
 	if (tool === TOOLS.PEN) {
 		onPenCancel();
@@ -143,6 +219,17 @@ function onPointerCancel(e) {
 	} else if (tool === TOOLS.SELECT) {
 		onSelectCancel();
 	}
+}
+
+function onPointerCancel(e) {
+	if (e && e.pointerType === 'touch') {
+		activePointers.delete(e.pointerId);
+		if (isPinching && activePointers.size < 2) {
+			isPinching = false;
+		}
+	}
+	activePointerId = null;
+	cancelActiveTool();
 }
 
 function onPointerLeave(e) {
