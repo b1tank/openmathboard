@@ -10,6 +10,8 @@ import {
 } from '../core/state.js';
 import { isSpacebarPanning } from '../canvas/camera.js';
 import { onPenPointerDown, onPenPointerMove, onPenPointerUp, onPenCancel } from './pen-tool.js';
+import { onEraserPointerDown, onEraserPointerMove, onEraserPointerUp, onEraserCancel } from './eraser-tool.js';
+import { onSelectPointerDown, onSelectPointerMove, onSelectPointerUp, onSelectCancel } from './select-tool.js';
 
 // ============ Pen/finger detection ============
 let hasPenInput = false;
@@ -50,19 +52,6 @@ function normalizeEvent(e) {
 	};
 }
 
-// ============ Legacy bridge ============
-// During Sprint 1, eraser and select still use the old input.js handlers.
-// We import them lazily to avoid circular deps at load time.
-let legacyDown = null;
-let legacyMove = null;
-let legacyUp = null;
-
-export function setLegacyHandlers(down, move, up) {
-	legacyDown = down;
-	legacyMove = move;
-	legacyUp = up;
-}
-
 // ============ Pointer handlers ============
 
 function onPointerDown(e) {
@@ -93,14 +82,15 @@ function onPointerDown(e) {
 	liveCanvas.setPointerCapture(e.pointerId);
 	activePointerId = e.pointerId;
 
+	const pos = normalizeEvent(e);
 	const tool = getCurrentTool();
 
 	if (tool === TOOLS.PEN) {
-		const pos = normalizeEvent(e);
 		onPenPointerDown(pos);
-	} else {
-		// Legacy bridge for eraser/select (Sprint 1)
-		if (legacyDown) legacyDown(e);
+	} else if (tool === TOOLS.ERASER) {
+		onEraserPointerDown(pos);
+	} else if (tool === TOOLS.SELECT) {
+		onSelectPointerDown(pos);
 	}
 }
 
@@ -117,9 +107,12 @@ function onPointerMove(e) {
 			const pos = normalizeEvent(ce);
 			onPenPointerMove(pos);
 		}
-	} else {
-		// Legacy bridge for eraser/select
-		if (legacyMove) legacyMove(e);
+	} else if (tool === TOOLS.ERASER) {
+		const pos = normalizeEvent(e);
+		onEraserPointerMove(pos);
+	} else if (tool === TOOLS.SELECT) {
+		const pos = normalizeEvent(e);
+		onSelectPointerMove(pos);
 	}
 }
 
@@ -127,14 +120,15 @@ function onPointerUp(e) {
 	if (activePointerId !== null && e && e.pointerId !== activePointerId) return;
 	activePointerId = null;
 
+	const pos = normalizeEvent(e);
 	const tool = getCurrentTool();
 
 	if (tool === TOOLS.PEN) {
-		const pos = normalizeEvent(e);
 		onPenPointerUp(pos);
-	} else {
-		// Legacy bridge for eraser/select
-		if (legacyUp) legacyUp(e);
+	} else if (tool === TOOLS.ERASER) {
+		onEraserPointerUp(pos);
+	} else if (tool === TOOLS.SELECT) {
+		onSelectPointerUp(pos);
 	}
 }
 
@@ -144,9 +138,10 @@ function onPointerCancel(e) {
 	const tool = getCurrentTool();
 	if (tool === TOOLS.PEN) {
 		onPenCancel();
-	} else {
-		// For legacy tools, treat cancel as pointer up
-		if (legacyUp) legacyUp(e);
+	} else if (tool === TOOLS.ERASER) {
+		onEraserCancel();
+	} else if (tool === TOOLS.SELECT) {
+		onSelectCancel();
 	}
 }
 
