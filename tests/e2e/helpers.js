@@ -5,7 +5,8 @@
  */
 export async function hasDrawnPixels(page, x, y, w, h) {
 	return page.evaluate(({ x, y, w, h }) => {
-		const canvas = document.querySelector('canvas');
+		// Use scene canvas (drawingCanvas) — committed strokes are rendered here
+		const canvas = document.getElementById('drawingCanvas') || document.querySelector('canvas');
 		const ctx = canvas.getContext('2d');
 		const data = ctx.getImageData(x, y, w, h).data;
 		for (let i = 0; i < data.length; i += 4) {
