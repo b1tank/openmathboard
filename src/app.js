@@ -22,8 +22,8 @@ import {
 	getStrokes
 } from './core/state.js';
 import { redrawCanvas } from './canvas/renderer.js';
-import { setupCanvasListeners, setupKeyboardShortcuts, legacyPointerDown, legacyPointerMove, legacyPointerUp } from './interaction/input.js';
-import { setupInputManager, setLegacyHandlers, invalidateCachedRect } from './interaction/input-manager.js';
+import { setupKeyboardShortcuts } from './interaction/input.js';
+import { setupInputManager, invalidateCachedRect } from './interaction/input-manager.js';
 import { setupToolbarListeners } from './ui/toolbar.js';
 import { setupDropZone, setupClipboard } from './ui/images.js';
 import { setTool } from './interaction/tools.js';
@@ -103,10 +103,7 @@ function init() {
 
 	// Setup modules
 	setupToolbarListeners();
-	setupCanvasListeners(); // now a no-op for pointer events; kept for compat
-	setupInputManager(); // new: single owner of pointer events on liveCanvas
-	// Bridge legacy eraser/select handlers until Sprint 2 extracts them
-	setLegacyHandlers(legacyPointerDown, legacyPointerMove, legacyPointerUp);
+	setupInputManager();
 	setupDropZone();
 	setupClipboard();
 	setupKeyboardShortcuts();
