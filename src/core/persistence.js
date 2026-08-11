@@ -1,5 +1,6 @@
 // OpenMathBoard — localStorage persistence (save/load objects + camera)
 import { getStrokes, setStrokes, getCamera, updateCamera } from './state.js';
+import { trackEvent } from './telemetry.js';
 
 const STORAGE_KEY = 'openmathboard.canvas.v2';
 const DEBOUNCE_MS = 2000;
@@ -47,8 +48,9 @@ function saveState() {
 		dirty = false;
 		setSaveStatus('saved');
 		return true;
-	} catch {
+	} catch (error) {
 		// Preserve dirty state so a later lifecycle flush can retry.
+		trackEvent('local_save_failed', { errorType: error?.name || 'Error' }, 'error');
 		setSaveStatus('error');
 		return false;
 	}

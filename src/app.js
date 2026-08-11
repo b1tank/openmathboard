@@ -37,6 +37,7 @@ import { initShapePalette } from './ui/palette.js';
 import { initRecording } from './ui/recording.js';
 import { initSaveStatus } from './ui/save-status.js';
 import { loadState, setupPersistenceLifecycle } from './core/persistence.js';
+import { initTelemetry } from './core/telemetry.js';
 
 // ============ Initialize i18n ============
 initI18n({
@@ -47,6 +48,7 @@ initI18n({
 
 // ============ Initialization ============
 function init() {
+	initTelemetry();
 	// Canvas
 	const canvas = document.getElementById('drawingCanvas');
 	setCanvas(canvas);

@@ -7,6 +7,7 @@ import { closeShapePaletteWithUI } from './palette.js';
 import { hidePropertyPanel, updatePropertyPanel } from './property-panel.js';
 import { t } from '../i18n/i18n.js';
 import { makeBottomSheetDismissible } from './bottom-sheet.js';
+import { trackEvent } from '../core/telemetry.js';
 
 const MIME_CANDIDATES_WITH_AUDIO = [
 	'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
@@ -423,6 +424,7 @@ function releaseMedia() {
 }
 
 function failRecording(error) {
+	trackEvent('recording_failed', { errorType: error?.name || 'Error' }, 'error');
 	releaseMedia();
 	setRecordingUi(false);
 	elements().stopBtn.disabled = false;

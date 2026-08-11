@@ -1,5 +1,9 @@
 # ── Stage 1: Build ──────────────────────────────────────────
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
+ARG VITE_APP_RELEASE=dev
+ARG VITE_TELEMETRY_ENDPOINT=
+ENV VITE_APP_RELEASE=$VITE_APP_RELEASE
+ENV VITE_TELEMETRY_ENDPOINT=$VITE_TELEMETRY_ENDPOINT
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
