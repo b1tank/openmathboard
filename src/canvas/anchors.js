@@ -283,12 +283,15 @@ export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 				}
 			}
 			if (anchorId === 'horizontal-scale') {
-				const oldDx = s.xMax - s.h;
-				const endpointY = s.a * oldDx * oldDx + s.k;
-				const halfWidth = Math.max(10, Math.abs(newWorldPos.x - s.h));
-				s.xMin = s.h - halfWidth;
-				s.xMax = s.h + halfWidth;
-				s.a = (endpointY - s.k) / (halfWidth * halfWidth);
+				const oldRight = Math.max(1, s.xMax - s.h);
+				const oldLeft = Math.max(1, s.h - s.xMin);
+				const newRight = Math.max(10, newWorldPos.x - s.h);
+				const ratio = newRight / oldRight;
+				// Scale both cropped extents by the same factor instead of forcing
+				// symmetry. This preserves any independently "eaten" left/right range.
+				s.xMin = s.h - oldLeft * ratio;
+				s.xMax = s.h + newRight;
+				s.a /= ratio * ratio;
 			}
 			if (anchorId === 'left') s.xMin = Math.min(newWorldPos.x, s.h - 5);
 			if (anchorId === 'right') s.xMax = Math.max(newWorldPos.x, s.h + 5);

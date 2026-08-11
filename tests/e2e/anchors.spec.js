@@ -43,8 +43,10 @@ test.describe('Shape anchors', () => {
 			onAnchorDrag(parabola, 'right', { x: 180, y: 20 });
 			const aAfterCrop = parabola.shape.a;
 			const oldRightY = parabola.shape.a * (parabola.shape.xMax - parabola.shape.h) ** 2 + parabola.shape.k;
+			const oldLeftY = parabola.shape.a * (parabola.shape.xMin - parabola.shape.h) ** 2 + parabola.shape.k;
 			onAnchorDrag(parabola, 'horizontal-scale', { x: 160, y: 90 });
 			const newRightY = parabola.shape.a * (parabola.shape.xMax - parabola.shape.h) ** 2 + parabola.shape.k;
+			const newLeftY = parabola.shape.a * (parabola.shape.xMin - parabola.shape.h) ** 2 + parabola.shape.k;
 			const waveRightHandle = findAnchorAtPoint(wave, { x: 300, y: 100 }, camera)?.id;
 			const periodStartX = getAnchors(wave, camera).find(anchor => anchor.id === 'period').x;
 			onAnchorDrag(wave, 'period', { x: periodStartX + 160, y: 100 }, {
@@ -64,6 +66,8 @@ test.describe('Shape anchors', () => {
 				aAfterCrop,
 				oldRightY,
 				newRightY,
+				oldLeftY,
+				newLeftY,
 				waveRightHandle,
 				periodAfterScrub,
 				periodAnchorX,
@@ -79,9 +83,12 @@ test.describe('Shape anchors', () => {
 		]));
 		expect(result.aAfterVerticalScale).toBeLessThan(0);
 		expect(result.aAfterCrop).toBeCloseTo(result.aAfterVerticalScale, 8);
-		expect(result.parabola.xMin).toBe(40);
+		// Left was cropped to 50 and right to 80 before scaling. Moving the right
+		// scale handle to 60 applies a 0.75 ratio to both, preserving asymmetry.
+		expect(result.parabola.xMin).toBeCloseTo(62.5, 8);
 		expect(result.parabola.xMax).toBe(160);
 		expect(result.newRightY).toBeCloseTo(result.oldRightY, 8);
+		expect(result.newLeftY).toBeCloseTo(result.oldLeftY, 8);
 		expect(result.waveRightHandle).toBe('right');
 		expect(result.periodAfterScrub).toBeCloseTo(200 * Math.E, 8);
 		expect(result.periodAnchorX).toBe(200);
