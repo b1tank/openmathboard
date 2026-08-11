@@ -1,6 +1,13 @@
 // OpenMathBoard — Freehand stroke rendering + hit testing
 import { pointToPolylineDistance } from '../interaction/detection.js';
 
+// Round caps extend into each nominal gap by one full line width in total.
+// Scale both values with width and leave enough space for heavy strokes.
+export function getDashPattern(width) {
+	const w = Math.max(1, width || 4);
+	return [w * 2.5, w * 3];
+}
+
 export function renderFreehand(ctx, stroke) {
 	if (!stroke || !stroke.points || stroke.points.length < 2) return;
 
@@ -10,7 +17,7 @@ export function renderFreehand(ctx, stroke) {
 	ctx.lineCap = 'round';
 	ctx.lineJoin = 'round';
 	if (stroke.dash) {
-		ctx.setLineDash([8, 6]);
+		ctx.setLineDash(getDashPattern(stroke.width));
 	} else {
 		ctx.setLineDash([]);
 	}

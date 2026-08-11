@@ -39,6 +39,30 @@ test.describe('Input Architecture', () => {
 		}
 	});
 
+	test('pen attributes switch to pen and heavy dashes retain visible gaps', async ({ page }) => {
+		const result = await page.evaluate(async () => {
+			const state = await import('/src/core/state.js');
+			const tools = await import('/src/interaction/tools.js');
+			const { getDashPattern } = await import('/src/shapes/freehand.js');
+
+			tools.setTool(state.TOOLS.SELECT);
+			tools.setStrokeWidth(8);
+			const toolAfterWidth = state.getCurrentTool();
+
+			tools.setTool(state.TOOLS.ERASER);
+			tools.setDash(true);
+			return {
+				toolAfterWidth,
+				toolAfterDash: state.getCurrentTool(),
+				dashPattern: getDashPattern(8)
+			};
+		});
+
+		expect(result.toolAfterWidth).toBe('pen');
+		expect(result.toolAfterDash).toBe('pen');
+		expect(result.dashPattern).toEqual([20, 24]);
+	});
+
 	test('pointercancel handler exists and is wired to liveCanvas', async ({ page }) => {
 		// Verify the pointercancel listener is registered on the live canvas.
 		// Full behavioral testing requires real iPad pointer events;

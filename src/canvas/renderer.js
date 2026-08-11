@@ -5,7 +5,7 @@ import {
 	getLiveCtx, getCurrentStroke
 } from '../core/state.js';
 import { perfSceneRedraw } from '../core/perf.js';
-import { renderFreehand } from '../shapes/freehand.js';
+import { renderFreehand, getDashPattern } from '../shapes/freehand.js';
 import { renderLine } from '../shapes/line.js';
 import { renderCircle } from '../shapes/circle.js';
 import { renderEllipse } from '../shapes/ellipse.js';
@@ -186,7 +186,7 @@ export function drawStroke(ctx, stroke, camera) {
 	ctx.lineCap = 'round';
 	ctx.lineJoin = 'round';
 	const w = stroke.width || 4;
-	ctx.setLineDash(stroke.dash ? [w * 2, w * 2] : []);
+	ctx.setLineDash(stroke.dash ? getDashPattern(w) : []);
 
 	const renderer = stroke.shape && RENDERERS[stroke.shape.type]
 		? RENDERERS[stroke.shape.type]

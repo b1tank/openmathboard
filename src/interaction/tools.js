@@ -55,6 +55,10 @@ export function setStrokeWidth(width) {
 	document.querySelectorAll('.stroke-option').forEach(btn => {
 		btn.classList.toggle('active', parseInt(btn.dataset.width) === width);
 	});
+
+	// Main-toolbar drawing attributes express an intent to draw. Contextual
+	// selection properties bypass this function and keep the Select tool active.
+	setTool(TOOLS.PEN);
 }
 
 export function setDash(dash) {
@@ -65,4 +69,6 @@ export function setDash(dash) {
 	const dashBtn = document.getElementById('dashBtn');
 	if (dashBtn) dashBtn.classList.toggle('active', dash);
 	if (refs.dashBtnMobile) refs.dashBtnMobile.classList.toggle('active', dash);
+
+	setTool(TOOLS.PEN);
 }

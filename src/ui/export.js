@@ -1,6 +1,6 @@
 // OpenMathBoard — Export (copy to clipboard, save image)
 import { getStrokes, getCanvasRect, getDomRefs, getCamera } from '../core/state.js';
-import { renderFreehand } from '../shapes/freehand.js';
+import { renderFreehand, getDashPattern } from '../shapes/freehand.js';
 import { t } from '../i18n/i18n.js';
 import { showToast } from './toast.js';
 
@@ -125,7 +125,7 @@ export async function getCanvasBlob() {
 		tempCtx.lineJoin = 'round';
 
 		if (stroke.dash) {
-			tempCtx.setLineDash([8, 6]);
+			tempCtx.setLineDash(getDashPattern(stroke.width));
 		} else {
 			tempCtx.setLineDash([]);
 		}
