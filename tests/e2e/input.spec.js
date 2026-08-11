@@ -39,6 +39,42 @@ test.describe('Input Architecture', () => {
 		}
 	});
 
+	test('a pen tap selects existing ink while a drag still draws over it', async ({ page }) => {
+		const result = await page.evaluate(async () => {
+			const state = await import('/src/core/state.js');
+			const tools = await import('/src/interaction/tools.js');
+			const pen = await import('/src/interaction/pen-tool.js');
+			const existing = {
+				color: '#000000', width: 4, dash: false,
+				points: [{ x: 100, y: 100 }, { x: 200, y: 100 }]
+			};
+			state.setStrokes([existing]);
+			tools.setTool(state.TOOLS.PEN);
+
+			pen.onPenPointerDown({ x: 150, y: 100 });
+			pen.onPenPointerUp({ x: 150, y: 100 });
+			const tapResult = {
+				tool: state.getCurrentTool(),
+				selected: [...state.getSelectedStrokes()],
+				strokeCount: state.getStrokes().length
+			};
+
+			tools.setTool(state.TOOLS.PEN);
+			pen.onPenPointerDown({ x: 150, y: 100 });
+			pen.onPenPointerMove({ x: 160, y: 110 });
+			pen.onPenPointerUp({ x: 175, y: 120 });
+			return {
+				tapResult,
+				dragTool: state.getCurrentTool(),
+				dragStrokeCount: state.getStrokes().length
+			};
+		});
+
+		expect(result.tapResult).toEqual({ tool: 'select', selected: [0], strokeCount: 1 });
+		expect(result.dragTool).toBe('pen');
+		expect(result.dragStrokeCount).toBe(2);
+	});
+
 	test('pen attributes switch to pen and heavy dashes retain visible gaps', async ({ page }) => {
 		const result = await page.evaluate(async () => {
 			const state = await import('/src/core/state.js');

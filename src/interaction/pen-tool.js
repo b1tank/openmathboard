@@ -8,16 +8,23 @@ import {
 	getIsDrawing, setIsDrawing,
 	getCurrentStroke, setCurrentStroke,
 	getStrokes,
-	getCamera
+	getCamera,
+	setSelectedStrokes,
+	TOOLS
 } from '../core/state.js';
-import { redrawScene, redrawLive, drawStroke, invalidateCache } from '../canvas/renderer.js';
+import { redrawScene, redrawLive, redrawCanvas, drawStroke, invalidateCache } from '../canvas/renderer.js';
 import { saveToHistory } from '../core/history.js';
 import { hideHeroSection } from '../ui/hero.js';
 import { showConversionPopup } from '../ui/conversion.js';
 import { perfReset, perfSampleReceived, perfSampleCommitted, perfFrameStart, perfFrameEnd, perfLogSummary, perfCancel } from '../core/perf.js';
+import { findStrokeAtPoint, updateSelectionCursor } from './selection.js';
+import { setTool } from './tools.js';
+import { updatePropertyPanel } from '../ui/property-panel.js';
 
 // ============ Render loop ============
 let renderLoopActive = false;
+let pendingTapSelection = null;
+const TAP_MOVE_THRESHOLD = 6; // screen pixels
 
 function startRenderLoop() {
 	if (renderLoopActive) return;
@@ -62,10 +69,9 @@ function getMinSpacing() {
 
 // ============ Pen tool handlers ============
 
-export function onPenPointerDown(pos) {
+function beginStroke(pos) {
 	hideHeroSection();
 	perfReset();
-
 	setIsDrawing(true);
 	setCurrentStroke({
 		color: getCurrentColor(),
@@ -76,7 +82,27 @@ export function onPenPointerDown(pos) {
 	startRenderLoop();
 }
 
+export function onPenPointerDown(pos) {
+	const strokeIdx = findStrokeAtPoint(pos);
+	if (strokeIdx !== -1) {
+		// Wait briefly before deciding: a tap selects, while movement starts a
+		// normal stroke from the original contact point.
+		pendingTapSelection = { strokeIdx, startPos: pos };
+		return;
+	}
+	beginStroke(pos);
+}
+
 export function onPenPointerMove(pos) {
+	if (pendingTapSelection) {
+		const { startPos } = pendingTapSelection;
+		const zoom = getCamera().zoom;
+		const movedPx = Math.hypot(pos.x - startPos.x, pos.y - startPos.y) * zoom;
+		if (movedPx < TAP_MOVE_THRESHOLD) return;
+		pendingTapSelection = null;
+		beginStroke(startPos);
+	}
+
 	if (!getIsDrawing()) return;
 	perfSampleReceived();
 
@@ -92,6 +118,19 @@ export function onPenPointerMove(pos) {
 }
 
 export function onPenPointerUp(pos) {
+	if (pendingTapSelection) {
+		const { strokeIdx } = pendingTapSelection;
+		pendingTapSelection = null;
+		if (getStrokes()[strokeIdx]) {
+			setTool(TOOLS.SELECT);
+			setSelectedStrokes([strokeIdx]);
+			updateSelectionCursor();
+			updatePropertyPanel();
+			redrawCanvas();
+		}
+		return;
+	}
+
 	if (!getIsDrawing()) return;
 	setIsDrawing(false);
 	stopRenderLoop();
@@ -136,6 +175,10 @@ export function onPenPointerUp(pos) {
 }
 
 export function onPenCancel() {
+	if (pendingTapSelection) {
+		pendingTapSelection = null;
+		return;
+	}
 	if (!getIsDrawing()) return;
 	setIsDrawing(false);
 	stopRenderLoop();
