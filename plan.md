@@ -865,15 +865,15 @@ Target: one focused week.
 
 | ID | Task | Effort | Verification | Status |
 |----|------|--------|--------------|--------|
-| PR-001 | Upgrade Vite and vulnerable transitive dependencies | XS | `npm audit`, build, full tests | [ ] |
-| PR-002 | Add `npm ci`, build, Playwright, and audit gates before deploy | S | Broken test prevents deployment | [ ] |
-| PR-003 | Add post-deploy `/health` and app-shell smoke check | XS | Workflow fails/rolls back on bad revision | [ ] |
-| PR-004 | Add Chromium, Firefox, and WebKit Playwright projects | S | Core suite green in all three | [ ] |
-| PR-005 | Create real-iPad release smoke checklist | S | Pencil, camera, recording, background/reload run documented | [ ] |
-| PR-006 | Flush local save on `visibilitychange`/`pagehide` | S | Last edit survives immediate background/close | [ ] |
-| PR-007 | Add Saved / Saving / Error status | S | Status maps to durable local write | [ ] |
-| PR-008 | Cap history by count and approximate memory | XS | 30-minute synthetic lesson remains bounded | [ ] |
-| PR-009 | Add frontend error and release telemetry | S | Test exception appears with release SHA | [ ] |
+| PR-001 | Upgrade Vite and vulnerable transitive dependencies | XS | `npm audit`, build, full tests | [x] |
+| PR-002 | Add `npm ci`, build, Playwright, and audit gates before deploy | S | Broken test prevents deployment | [x] |
+| PR-003 | Add post-deploy `/health` and app-shell smoke check | XS | Workflow fails/rolls back on bad revision | [x] |
+| PR-004 | Add Chromium, Firefox, and WebKit Playwright projects | S | Core suite green in all three | [x] |
+| PR-005 | Create real-iPad release smoke checklist | S | Pencil, camera, recording, background/reload run documented | [x] |
+| PR-006 | Flush local save on `visibilitychange`/`pagehide` | S | Last edit survives immediate background/close | [x] |
+| PR-007 | Add Saved / Saving / Error status | S | Status maps to durable local write | [x] |
+| PR-008 | Cap history by count and approximate memory | XS | 30-minute synthetic lesson remains bounded | [x] |
+| PR-009 | Add frontend error and release telemetry | S | Test exception appears with release SHA | [x] |
 | PR-010 | Correct README/spec status drift | XS | Implemented and planned features are unambiguous | [x] |
 
 ### Sprint 1 — Unified scene and data safety
