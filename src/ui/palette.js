@@ -16,9 +16,11 @@ import { redrawCanvas } from '../canvas/renderer.js';
 import { saveToHistory } from '../core/history.js';
 import { hideHeroSection } from './hero.js';
 import { t } from '../i18n/i18n.js';
+import { hidePropertyPanel, updatePropertyPanel } from './property-panel.js';
 
 let paletteEl = null;
 let isOpen = false;
+let canvasCloseBound = false;
 
 // Drag state
 let dragShape = null;
@@ -71,6 +73,15 @@ export function initShapePalette() {
 	}
 
 	buildPalette();
+
+	// The picker is transient: the next direct canvas action dismisses it. This
+	// listener runs after the canvas tool handler, so selection/property state is
+	// already current when the property panel is restored.
+	if (!canvasCloseBound) {
+		const liveCanvas = document.getElementById('liveCanvas');
+		liveCanvas?.addEventListener('pointerdown', () => closeShapePaletteWithUI());
+		canvasCloseBound = true;
+	}
 }
 
 function buildPalette() {
@@ -177,6 +188,8 @@ function onDragEnd(e) {
 
 		// Only place if dropped over the canvas area
 		if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+			// Keep the picker open so several shapes can be dropped in sequence.
+			// A separate pointerdown that starts on the canvas still dismisses it.
 			placeShape(dragShape, x, y);
 		}
 	}
@@ -211,19 +224,34 @@ export function toggleShapePalette() {
 	if (paletteEl) {
 		paletteEl.classList.toggle('show', isOpen);
 	}
+	// The shape picker and selection properties are mutually exclusive panels,
+	// especially on small iOS screens where the picker is a bottom sheet.
+	if (isOpen) hidePropertyPanel();
+	else updatePropertyPanel();
 }
 
 /**
  * Toggle shape palette and sync all button active states (desktop + mobile).
  * Mirrors the setTool / setDash pattern so callers are one-liners.
  */
-export function toggleShapePaletteWithUI() {
-	toggleShapePalette();
-	const open = isOpen;
+function syncShapePaletteButtons() {
 	const refs = getDomRefs();
 	const desktopBtn = document.getElementById('shapePaletteBtn');
-	if (desktopBtn) desktopBtn.classList.toggle('active', open);
-	if (refs.shapePaletteBtnMobile) refs.shapePaletteBtnMobile.classList.toggle('active', open);
+	if (desktopBtn) desktopBtn.classList.toggle('active', isOpen);
+	if (refs.shapePaletteBtnMobile) refs.shapePaletteBtnMobile.classList.toggle('active', isOpen);
+}
+
+export function toggleShapePaletteWithUI() {
+	toggleShapePalette();
+	syncShapePaletteButtons();
+}
+
+export function closeShapePaletteWithUI() {
+	if (!isOpen) return;
+	isOpen = false;
+	paletteEl?.classList.remove('show');
+	syncShapePaletteButtons();
+	updatePropertyPanel();
 }
 
 export function isShapePaletteOpen() {

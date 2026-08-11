@@ -3,7 +3,9 @@
 export function renderEllipse(ctx, obj) {
 	if (!obj.shape) return;
 	ctx.beginPath();
-	ctx.ellipse(obj.shape.cx, obj.shape.cy, obj.shape.rx, obj.shape.ry, obj.shape.rotation || 0, 0, Math.PI * 2);
+	// Rotation is applied once by the central renderer so every shape, its
+	// selection bounds, and its anchors share the same transform.
+	ctx.ellipse(obj.shape.cx, obj.shape.cy, obj.shape.rx, obj.shape.ry, 0, 0, Math.PI * 2);
 	ctx.stroke();
 	if (obj.fill && obj.fill !== 'none') {
 		ctx.fillStyle = obj.fill === 'transparent' ? 'rgba(0,0,0,0.05)' : obj.color;

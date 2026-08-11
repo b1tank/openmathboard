@@ -9,8 +9,8 @@ import { renderFreehand } from '../shapes/freehand.js';
 import { renderLine } from '../shapes/line.js';
 import { renderCircle } from '../shapes/circle.js';
 import { renderEllipse } from '../shapes/ellipse.js';
-import { renderParabola } from '../shapes/parabola.js';
-import { renderSine } from '../shapes/sine.js';
+import { renderParabola, isPointNearParabola } from '../shapes/parabola.js';
+import { renderSine, isPointNearSine } from '../shapes/sine.js';
 import { renderArrow } from '../shapes/arrow.js';
 import { renderAxes } from '../shapes/axes.js';
 import { renderHyperbola, isPointNearHyperbola } from '../shapes/hyperbola.js';
@@ -166,6 +166,18 @@ export function redrawCanvas() {
 
 // ============ Stroke drawing ============
 
+function getObjectRotation(stroke) {
+	return (stroke.shape && stroke.shape.rotation) || stroke.rotation || 0;
+}
+
+function rotatePoint(x, y, cx, cy, angle) {
+	const cos = Math.cos(angle);
+	const sin = Math.sin(angle);
+	const dx = x - cx;
+	const dy = y - cy;
+	return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+}
+
 export function drawStroke(ctx, stroke, camera) {
 	if (!stroke) return;
 
@@ -176,35 +188,27 @@ export function drawStroke(ctx, stroke, camera) {
 	const w = stroke.width || 4;
 	ctx.setLineDash(stroke.dash ? [w * 2, w * 2] : []);
 
-	// Use shape registry for typed shapes
-	if (stroke.shape && RENDERERS[stroke.shape.type]) {
-		// Apply rotation if set
-		const rotation = stroke.shape.rotation || 0;
-		if (rotation !== 0) {
-			const bounds = getStrokeBounds(stroke);
-			if (bounds) {
-				const cx = (bounds.minX + bounds.maxX) / 2;
-				const cy = (bounds.minY + bounds.maxY) / 2;
-				ctx.save();
-				ctx.translate(cx, cy);
-				ctx.rotate(rotation);
-				ctx.translate(-cx, -cy);
-				RENDERERS[stroke.shape.type](ctx, stroke);
-				ctx.restore();
-			} else {
-				RENDERERS[stroke.shape.type](ctx, stroke);
-			}
-		} else {
-			RENDERERS[stroke.shape.type](ctx, stroke);
-		}
-		ctx.setLineDash([]);
-		return;
-	}
+	const renderer = stroke.shape && RENDERERS[stroke.shape.type]
+		? RENDERERS[stroke.shape.type]
+		: (stroke.points && stroke.points.length >= 2 ? renderFreehand : null);
+	if (!renderer) return;
 
-	// Freehand fallback
-	if (stroke.points && stroke.points.length >= 2) {
-		renderFreehand(ctx, stroke);
+	// Apply rotation centrally to typed shapes and freehand strokes alike.
+	const rotation = getObjectRotation(stroke);
+	const bounds = rotation !== 0 ? getStrokeBounds(stroke) : null;
+	if (bounds) {
+		const cx = (bounds.minX + bounds.maxX) / 2;
+		const cy = (bounds.minY + bounds.maxY) / 2;
+		ctx.save();
+		ctx.translate(cx, cy);
+		ctx.rotate(rotation);
+		ctx.translate(-cx, -cy);
+		renderer(ctx, stroke);
+		ctx.restore();
+	} else {
+		renderer(ctx, stroke);
 	}
+	ctx.setLineDash([]);
 }
 
 // ============ Selection rendering ============
@@ -239,7 +243,7 @@ function drawSelectionHighlights(ctx, strokes, selectedStrokes, camera) {
 		const sh = (bounds.maxY - bounds.minY) * camera.zoom;
 		const padding = 6;
 
-		const rotation = (stroke.shape && stroke.shape.rotation) || 0;
+		const rotation = getObjectRotation(stroke);
 		const centerSx = sx + sw / 2;
 		const centerSy = sy + sh / 2;
 
@@ -332,6 +336,21 @@ export function getStrokeBounds(stroke) {
 export function isPointNearStroke(pos, stroke, threshold = 15) {
 	if (!stroke) return false;
 
+	// Shape equations and freehand points are stored before rotation. Transform
+	// the pointer back into that coordinate system before doing any hit test.
+	const rotation = getObjectRotation(stroke);
+	if (rotation !== 0) {
+		const bounds = getStrokeBounds(stroke);
+		if (bounds) {
+			pos = rotatePoint(
+				pos.x, pos.y,
+				(bounds.minX + bounds.maxX) / 2,
+				(bounds.minY + bounds.maxY) / 2,
+				-rotation
+			);
+		}
+	}
+
 	if (stroke.shape) {
 		const s = stroke.shape;
 		const half = threshold + stroke.width / 2;
@@ -378,6 +397,11 @@ export function isPointNearStroke(pos, stroke, threshold = 15) {
 				if (pointToSegmentDistance(pos, { x: s.x3, y: s.y3 }, { x: s.x1, y: s.y1 }) < half) return true;
 				return false;
 			}
+			case 'parabola':
+				return isPointNearParabola(pos, stroke, threshold);
+			case 'sine':
+			case 'cosine':
+				return isPointNearSine(pos, stroke, threshold);
 			case 'hyperbola':
 				return isPointNearHyperbola(pos, stroke, threshold);
 		}

@@ -13,7 +13,7 @@ import {
 	getDraggingAnchorInfo, setDraggingAnchorInfo,
 	getCamera
 } from '../core/state.js';
-import { redrawCanvas, redrawLive, getStrokeBounds } from '../canvas/renderer.js';
+import { redrawCanvas, getStrokeBounds } from '../canvas/renderer.js';
 import {
 	findStrokeAtPoint, findStrokesInRect,
 	moveSelectedStrokes, updateSelectionCursor
@@ -38,7 +38,9 @@ function stopRenderLoop() {
 function renderLoopTick() {
 	if (!renderLoopActive) return;
 	requestAnimationFrame(() => {
-		redrawLive();
+		// Anchor and selection drags mutate committed geometry. Repaint the scene
+		// as well as the overlay so the shape itself follows the handle live.
+		redrawCanvas();
 		if (renderLoopActive) renderLoopTick();
 	});
 }
@@ -68,6 +70,11 @@ export function onSelectPointerDown(pos) {
 			if (anchor) {
 				setIsDraggingAnchor(true);
 				const info = { strokeIdx: idx, anchorId: anchor.id };
+				if (stroke.shape && ['sine', 'cosine'].includes(stroke.shape.type) && anchor.id === 'period') {
+					info.savedPeriod = (2 * Math.PI) / Math.abs(stroke.shape.B || 0.01);
+					info.periodDragStartX = stroke.shape.xMax;
+					info.cameraZoom = camera.zoom;
+				}
 				if (stroke.shape && stroke.shape.type === 'parabola' && anchor.id === 'vertex') {
 					const s = stroke.shape;
 					info.savedEndpointYLeft = s.a * (s.xMin - s.h) ** 2 + s.k;
@@ -89,7 +96,7 @@ export function onSelectPointerDown(pos) {
 			const bounds = getStrokeBounds(stroke);
 			if (!bounds) return false;
 			let testX = pos.x, testY = pos.y;
-			const rotation = (stroke.shape && stroke.shape.rotation) || 0;
+			const rotation = (stroke.shape && stroke.shape.rotation) || stroke.rotation || 0;
 			if (rotation !== 0) {
 				const cx = (bounds.minX + bounds.maxX) / 2;
 				const cy = (bounds.minY + bounds.maxY) / 2;
@@ -121,6 +128,7 @@ export function onSelectPointerDown(pos) {
 		updateSelectionCursor();
 		updatePropertyPanel();
 		redrawCanvas();
+		startRenderLoop();
 		return;
 	}
 
