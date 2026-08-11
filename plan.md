@@ -1,6 +1,8 @@
 # OpenMathBoard v2 — Technical Implementation Plan
 
-Reference: [spec.md](spec.md) for product requirements.
+Reference: [spec.md](spec.md) for v2 editor requirements and [v3-spec.md](v3-spec.md) for the active product target.
+
+> **Plan status:** Phases 0–4 below are historical editor-foundation work and are substantially delivered. The active production-readiness execution plan is maintained in [Production Readiness Plan](#production-readiness-plan-active) at the end of this document. Planned capabilities in `v3-spec.md` are not considered shipped unless marked **✅ Implemented**.
 
 ---
 
@@ -829,3 +831,158 @@ After decomposition: **no file >500 lines**, behavior unchanged. All modules use
 | **Total** | **~3500 new** | **~5 weeks** |
 
 v1: 1 file × 2714 lines. v2: ~20 modules + 6 test files, each <500 lines, ~4500 total lines.
+
+
+---
+
+## Production Readiness Plan (Active)
+
+This plan converts the production-readiness audit into an executable backlog. Estimates assume one experienced engineer using AI assistance heavily and include implementation, focused tests, review, and deployment. UI work moves quickly; migrations, iOS validation, security, accessibility, and external review remain the schedule constraints.
+
+### Effort scale
+
+| Size | AI-assisted elapsed effort |
+|------|-----------------------------|
+| XS | 2–6 hours |
+| S | 1–3 days |
+| M | 4–10 days |
+| L | 2–5 weeks |
+| XL | 1–4 months |
+
+### Delivery rules
+
+1. No production deploy before build, automated tests, and smoke checks pass.
+2. No “Saved” state until data is durable locally.
+3. No new scene object type without render, bounds, hit-test, history, serialization, migration, export, and recording coverage.
+4. iPad Safari is a release-gating platform, not an informal manual check.
+5. Every migration keeps a last-known-good copy and has rollback/recovery behavior.
+6. Planned status in specs must not be presented as implemented.
+7. Large AI-generated changes must be split into independently verifiable commits.
+
+### Sprint 0 — Low-hanging release safety
+
+Target: one focused week.
+
+| ID | Task | Effort | Verification | Status |
+|----|------|--------|--------------|--------|
+| PR-001 | Upgrade Vite and vulnerable transitive dependencies | XS | `npm audit`, build, full tests | [ ] |
+| PR-002 | Add `npm ci`, build, Playwright, and audit gates before deploy | S | Broken test prevents deployment | [ ] |
+| PR-003 | Add post-deploy `/health` and app-shell smoke check | XS | Workflow fails/rolls back on bad revision | [ ] |
+| PR-004 | Add Chromium, Firefox, and WebKit Playwright projects | S | Core suite green in all three | [ ] |
+| PR-005 | Create real-iPad release smoke checklist | S | Pencil, camera, recording, background/reload run documented | [ ] |
+| PR-006 | Flush local save on `visibilitychange`/`pagehide` | S | Last edit survives immediate background/close | [ ] |
+| PR-007 | Add Saved / Saving / Error status | S | Status maps to durable local write | [ ] |
+| PR-008 | Cap history by count and approximate memory | XS | 30-minute synthetic lesson remains bounded | [ ] |
+| PR-009 | Add frontend error and release telemetry | S | Test exception appears with release SHA | [ ] |
+| PR-010 | Correct README/spec status drift | XS | Implemented and planned features are unambiguous | [x] |
+
+### Sprint 1 — Unified scene and data safety
+
+Target: 2–3 focused weeks.
+
+| ID | Task | Effort | Depends on | Acceptance |
+|----|------|--------|------------|------------|
+| PR-101 | Define versioned `Board` and `SceneObject` schemas | M | PR-010 | Schema validates every current stroke/shape |
+| PR-102 | Move imported images from DOM-only state into scene state | M | PR-101 | Images survive reload and file round-trip |
+| PR-103 | Add image move/resize/delete to history | S | PR-102 | Undo/redo covers every image action |
+| PR-104 | Centralize scene rendering across canvas/export/recording | M | PR-101 | One renderer produces matching output |
+| PR-105 | Correct PNG export for every shape, fill, dash, and rotation | S | PR-104 | Golden output tests pass |
+| PR-106 | Implement `.openmathboard` save/load with schema version | M | PR-101, PR-102 | Lossless round-trip for all object types |
+| PR-107 | Add IndexedDB repositories for boards and blobs | M | PR-101 | Transactional board save/load works offline |
+| PR-108 | Migrate existing localStorage board on first launch | M | PR-107 | Migration is idempotent and recoverable |
+| PR-109 | Keep last-known-good snapshots and corruption recovery UI | M | PR-107 | Simulated partial/corrupt write recovers safely |
+| PR-110 | Split modules beyond architecture limits, starting with recording | S | None | Focused modules remain independently tested |
+
+### Sprint 2 — Complete local lesson workflow
+
+Target: 4–6 focused weeks.
+
+| ID | Task | Effort | Depends on | Acceptance |
+|----|------|--------|------------|------------|
+| PR-201 | Multiple local boards, titles, thumbnails, duplicate, trash | M/L | PR-107 | Teacher can organize and recover lessons |
+| PR-202 | Basic text tool with math symbols | M | PR-101 | Text edits, selects, persists, exports |
+| PR-203 | Math typesetting / LaTeX object | M | PR-202 | Equations render and export consistently |
+| PR-204 | PDF import with selectable page backgrounds | M | PR-102 | Multi-page worksheet annotation works on iPad |
+| PR-205 | Pages/lesson scenes and navigator | M/L | PR-101 | Recording and export follow page changes |
+| PR-206 | Starter template library | S | PR-106, PR-205 | Blank, axes, graph, number line templates |
+| PR-207 | SVG export | M | PR-104 | Math objects remain vector and transformed correctly |
+| PR-208 | Multi-page PDF export | M | PR-205 | All lesson pages export in order |
+| PR-209 | PWA manifest, offline shell, update UX | S | PR-107 | Install/update/offline flows tested on iPad |
+| PR-210 | Recording duration/size warnings and audio meter | M | None | Supported limits and active mic are visible |
+| PR-211 | Recording track-end/background interruption handling | M | None | Calls/background/device loss fail safely |
+| PR-212 | Checkpoint recording chunks to IndexedDB | M | PR-107 | Interrupted session offers recovery |
+| PR-213 | First-run onboarding and shortcut help | S | Stable toolbar | New teacher completes a lesson unaided |
+
+### Sprint 3 — Identity and cloud boards
+
+Target: 6–10 focused weeks.
+
+| ID | Task | Effort | Depends on | Acceptance |
+|----|------|--------|------------|------------|
+| PR-301 | Configure Microsoft Entra External ID | M | Legal/privacy baseline | Google/Microsoft login and secure logout work |
+| PR-302 | Board metadata API and Blob Storage service | L | PR-101 | Authenticated CRUD with ownership enforcement |
+| PR-303 | ETag-based board data API | M | PR-302 | Conditional writes prevent silent overwrite |
+| PR-304 | Offline sync queue, retries, and conflict UI | L | PR-107, PR-303 | Offline edits converge after reconnect |
+| PR-305 | Cloud dashboard and board management | L | PR-302 | Search, rename, duplicate, trash, restore |
+| PR-306 | Guest-board migration after sign-in | S | PR-301, PR-304 | Existing local work migrates once without duplication |
+| PR-307 | Backup, quota, telemetry, and load testing | M | PR-302 | Recovery and limits are operationally documented |
+
+### Sprint 4 — Sharing and student view
+
+Target: 3–5 focused weeks, excluding recording cloud infrastructure.
+
+| ID | Task | Effort | Depends on | Acceptance |
+|----|------|--------|------------|------------|
+| PR-401 | Revocable read-only share tokens | M | PR-302 | Unauthorized writes impossible; revoke works |
+| PR-402 | Share sheet, clipboard link, and QR code | S | PR-401 | Teacher shares in two taps |
+| PR-403 | Stripped no-login student viewer | M | PR-401 | Pan/zoom without edit controls |
+| PR-404 | Follow-teacher viewport updates | M | PR-403 | Student can follow or navigate independently |
+| PR-405 | Link expiration, caching, and abuse controls | M | PR-401 | Classroom load and revocation tested |
+| PR-406 | Resumable recording upload/finalization/playback | L | PR-302, PR-212 | Large lessons survive interrupted upload |
+
+### Sprint 5 — School readiness
+
+Start only after individual-teacher retention is demonstrated.
+
+| ID | Task | Effort | Exit condition |
+|----|------|--------|----------------|
+| PR-501 | Google Classroom / Teams basic sharing | M each | Pilot teachers use the integration weekly |
+| PR-502 | LTI 1.3 / LMS integration | L | Certified against target LMS platforms |
+| PR-503 | WCAG 2.2 AA remediation and independent audit | L | Audit findings resolved |
+| PR-504 | Privacy, terms, DPA, FERPA/COPPA posture | L/XL | Qualified counsel approval |
+| PR-505 | Admin, audit log, retention, domain controls | XL | School pilot requirements met |
+| PR-506 | CDN, staging, rollback, scaling, status page | L | SLO and incident procedures exercised |
+
+### Low-hanging priority order
+
+1. PR-001 dependency upgrade.
+2. PR-002 deployment test gate.
+3. PR-004 WebKit CI.
+4. PR-006/007 durable-save lifecycle and status.
+5. PR-008 bounded history.
+6. PR-009 frontend telemetry.
+7. PR-105 export correctness through the shared renderer.
+8. PR-210/211 recording safety warnings and interruption handling.
+9. PR-010 documentation truthfulness.
+10. PR-206 templates immediately after board serialization.
+
+### Milestones and realistic AI-assisted timing
+
+| Milestone | Estimated elapsed time |
+|-----------|------------------------|
+| Low-hanging safety improvements | 1 week |
+| Trustworthy closed teacher beta | 6–10 weeks |
+| Strong local lesson-creation product | 2–3 months |
+| Cloud-backed individual-teacher product | 3–5 months |
+| School-ready platform | 9–15 months |
+
+### Product gates
+
+| Gate | Required evidence |
+|------|-------------------|
+| Closed beta | No content loss in 100 lifecycle tests; 30-minute iPad session stable; crash-free ≥ 99.5% |
+| Teacher MVP | Useful lesson in < 5 minutes; pilot week-4 retention ≥ 30%; recording completion ≥ 98% |
+| Cloud launch | Sync ≥ 99.9%; share load p75 < 2 s; delete/export/recovery verified |
+| School pilot | WCAG audit, DPA/legal package, SSO/LMS target, support and incident process |
+
+The north-star metric is **weekly lessons created and shared by retained teachers**. Feature velocity is not a substitute for durable saves, repeat use, or teacher trust.

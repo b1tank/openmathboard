@@ -27,36 +27,34 @@
 
 ## ✨ Features (Implemented)
 
-- **Smart shape recognition** — Lines, circles, parabolas auto-detected on stroke end
-- **Adjustable sensitivity** — Low/Med/High presets or fine-tune 0–100
+- **Smart shape suggestions** — Lines, circles, and parabolas are detected after drawing for explicit conversion
 - **Select tool** — Click or drag-rectangle to select, move, copy/paste, delete strokes
+- **Infinite canvas** — Zoom, pan, pinch gestures, and camera-aware rendering
+- **Parametric anchors** — Move, resize, rotate, and tune math-specific geometry
 - **Freehand drawing** — Smooth stroke stabilization with quadratic curves
 - **6 colors** — Black, blue, red, green, purple, orange
 - **3 stroke widths** — Thin (2px), medium (4px), thick (8px)
 - **Eraser** — Tap to remove entire strokes
-- **Undo/redo** — Full history stack
-- **Image import** — Drag & drop, paste, or file picker; images are draggable/resizable
+- **Undo/redo** — Snapshot history for strokes and parametric shapes
+- **Image import** — Drag & drop, paste, tap-to-select, reposition, and four-corner resize
+- **Course recording** — Visible-board video with microphone, optional face camera, pause/resume, discard, and local download
 - **Export** — Copy to clipboard (PNG) or save to file
-- **Keyboard shortcuts** — P=pen, E=eraser, S=select, G=smart shapes, Ctrl+Z/Y/S
+- **Keyboard shortcuts** — P=pen, E=eraser, S=select, Ctrl+Z/Y/S
 - **i18n** — English / 中文
 - **Mobile responsive** — Hamburger menu on narrow screens
 
 ## 🚀 Roadmap
 
-**v0.2** — Anchors & refinement
-- Draggable anchor points for lines (resize/rotate)
-- Two-phase drawing (hold to suggest, release to confirm)
-- Dashed line toggle
+The editor foundation and browser-local course recording are implemented. The active roadmap now prioritizes production trust and complete teacher workflows:
 
-**v0.3** — More shapes
-- Circle/ellipse anchors (center + radius)
-- Parabola anchors (vertex + curvature)
-- Auto-snap to existing endpoints
+1. **Release safety** — dependency upgrades, CI test gates, WebKit coverage, frontend telemetry
+2. **Data safety** — unified scene objects, IndexedDB, save lifecycle, bounded history, recovery
+3. **Lesson creation** — text/math notation, PDF annotation, pages, templates, correct SVG/PDF export
+4. **Cloud product** — Microsoft Entra External ID, multi-board dashboard, offline/cloud sync
+5. **Classroom sharing** — read-only links, QR codes, student viewer, follow-teacher mode
+6. **School readiness** — accessibility, legal/DPA, LMS integrations, admin and operations
 
-**v0.4** — Touch gestures
-- Pinch-to-zoom and pan
-- Two-finger tap to undo
-- Pencil draws, finger pans
+See [v3-spec.md](v3-spec.md) for target requirements and [plan.md](plan.md#production-readiness-plan-active) for the active AI-assisted execution backlog and effort estimates.
 
 ## 🎯 Design Philosophy
 
@@ -66,7 +64,7 @@
 
 ## 🔒 Privacy
 
-Runs entirely in your browser. Nothing uploaded.
+The current editor and recorder run entirely in your browser. Boards, camera, microphone, and recordings are not uploaded by the current implementation; recordings are downloaded locally. Cloud sync and sharing are planned features and will require explicit privacy, retention, and account controls before launch.
 
 ## 📝 Notes
 

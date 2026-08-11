@@ -1,5 +1,7 @@
 # OpenMathBoard v2 — Redesign Spec
 
+> **Status:** Historical editor-redesign specification. The v2 editor foundation is substantially implemented. Active production requirements are in [v3-spec.md](v3-spec.md), and current execution work is in [plan.md#production-readiness-plan-active](plan.md#production-readiness-plan-active).
+
 ## 🧠 One-Line Definition
 
 > **A math-first infinite canvas whiteboard where teachers draw freehand, explicitly convert to math shapes, and tune them with parametric anchors — optimized for iPad + Apple Pencil live teaching.**

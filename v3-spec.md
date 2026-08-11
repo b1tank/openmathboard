@@ -6,6 +6,23 @@
 
 ---
 
+## Document Status
+
+This specification describes the **target v3 product**, not only shipped functionality. Status labels are authoritative:
+
+| Status | Meaning |
+|--------|---------|
+| ✅ Implemented | Present in the current production code |
+| 🟡 Partial | Working foundation or prototype; not production-complete |
+| 📋 Planned | Approved target requirement, not yet implemented |
+| ❌ Deferred | Explicitly outside the current delivery phase |
+
+### Current production baseline
+
+Implemented today: infinite canvas drawing, parametric math shapes and anchors, selection, imported-image positioning/resizing, PNG export, browser-local persistence for strokes, English/Chinese UI, and local course recording with microphone plus optional face camera.
+
+Known production blockers: images are still DOM-managed rather than persisted scene objects; storage is a single localStorage board; export is incomplete for several transformed shape types; long recordings are memory-bound; and cloud boards, text/math notation, PDF workflows, pages, sharing, student view, PWA/offline data, and institutional controls are planned rather than shipped.
+
 ## Top Principles
 
 1. **Math objects, not pixels** — A parabola is `{vertex, a, direction}` with draggable handles. This is our moat.
@@ -13,7 +30,7 @@
 3. **Sign in and go** — One-click Microsoft/Google login. Boards auto-sync. Open any device, resume where you left off.
 4. **Share, don't collaborate (MVP)** — Teachers share read-only links with students. Real-time co-editing is Phase 2+.
 5. **OSS core, SaaS shell** — Core editor stays MIT. Cloud/auth layer is the product. Excalidraw model.
-6. **Azure-native** — Already on Container Apps. Extend with AD B2C, Blob Storage, Cosmos DB, SignalR.
+6. **Azure-native** — Already on Container Apps. Extend with Entra External ID, Blob Storage, Cosmos DB, SignalR.
 
 ---
 
@@ -21,15 +38,15 @@
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Email + password login | ✅ | Azure AD B2C custom policy |
-| Microsoft account login | ✅ | Azure AD B2C built-in provider |
-| Google account login | ✅ | Azure AD B2C social identity provider |
+| Email + password login | 📋 Planned | Microsoft Entra External ID custom policy |
+| Microsoft account login | 📋 Planned | Microsoft Entra External ID built-in provider |
+| Google account login | 📋 Planned | Microsoft Entra External ID social identity provider |
 | Apple ID login | ❌ Phase 2 | Add when iOS app is considered |
-| Anonymous / guest mode | ✅ | Current behavior — localStorage only, no cloud |
-| Session management | ✅ | JWT tokens, 30-day refresh, secure httpOnly cookies |
-| Profile (name, avatar) | ✅ | Pulled from identity provider, editable |
+| Anonymous / guest mode | ✅ Implemented | Current behavior — localStorage only, no cloud |
+| Session management | 📋 Planned | JWT tokens, 30-day refresh, secure httpOnly cookies |
+| Profile (name, avatar) | 📋 Planned | Pulled from identity provider, editable |
 
-**Implementation:** Azure AD B2C handles all OAuth flows. Frontend gets a JWT, passes it as `Authorization: Bearer <token>` to the API. No password storage on our side.
+**Implementation:** Microsoft Entra External ID handles all OAuth flows. Frontend gets a JWT, passes it as `Authorization: Bearer <token>` to the API. No password storage on our side.
 
 ---
 
@@ -37,15 +54,15 @@
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Auto-save to cloud | ✅ | Debounced (2s), full board state → Azure Blob Storage |
-| Board list (dashboard) | ✅ | Grid/list view, thumbnail, last-modified date, title |
-| Create new board | ✅ | Blank, or from template |
-| Rename board | ✅ | Inline edit on dashboard |
-| Delete board | ✅ | Soft delete → 30-day trash → permanent |
-| Duplicate board | ✅ | Deep copy of board state |
+| Auto-save to cloud | 📋 Planned | Debounced (2s), full board state → Azure Blob Storage |
+| Board list (dashboard) | 📋 Planned | Grid/list view, thumbnail, last-modified date, title |
+| Create new board | 📋 Planned | Blank, or from template |
+| Rename board | 📋 Planned | Inline edit on dashboard |
+| Delete board | 📋 Planned | Soft delete → 30-day trash → permanent |
+| Duplicate board | 📋 Planned | Deep copy of board state |
 | Folders / organization | ❌ Phase 2 | Flat list for MVP |
 | Search boards | ❌ Phase 2 | Title search |
-| Board thumbnails | ✅ | Auto-generated canvas snapshot on save |
+| Board thumbnails | 📋 Planned | Auto-generated canvas snapshot on save |
 
 ### Board Data Model
 
@@ -93,13 +110,13 @@ Board {
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Save to file | ✅ | Download `.openmathboard` JSON file |
-| Load from file | ✅ | Open `.openmathboard` file → populate canvas |
-| File format is JSON | ✅ | Human-readable, versionable, diffable |
-| Schema version in file | ✅ | `{ version: 3, ... }` — migration on load |
-| Export PNG | ✅ | Current behavior, keep |
-| Export SVG | ✅ NEW | Vector export with math shapes as SVG paths |
-| Copy canvas to clipboard | ✅ | Current behavior, keep |
+| Save to file | 📋 Planned | Download `.openmathboard` JSON file |
+| Load from file | 📋 Planned | Open `.openmathboard` file → populate canvas |
+| File format is JSON | 📋 Planned | Human-readable, versionable, diffable |
+| Schema version in file | 📋 Planned | `{ version: 3, ... }` — migration on load |
+| Export PNG | ✅ Implemented | Current behavior, keep |
+| Export SVG | 📋 Planned | Vector export with math shapes as SVG paths |
+| Copy canvas to clipboard | ✅ Implemented | Current behavior, keep |
 
 ### File Schema (v3)
 
@@ -134,13 +151,13 @@ Board {
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Generate share link | ✅ | One-click button → copy URL to clipboard |
-| Read-only view | ✅ | Viewers see the board, can pan/zoom, cannot edit |
-| No login required to view | ✅ | Share token in URL grants read access |
-| View shows live updates | ✅ Phase 1.5 | Via polling (5s) initially; WebSocket later |
+| Generate share link | 📋 Planned | One-click button → copy URL to clipboard |
+| Read-only view | 📋 Planned | Viewers see the board, can pan/zoom, cannot edit |
+| No login required to view | 📋 Planned | Share token in URL grants read access |
+| View shows live updates | 📋 Planned | Via polling (5s) initially; WebSocket later |
 | Collaborative edit link | ❌ Phase 2 | Future: real-time co-editing |
 | Embed via iframe | ❌ Phase 2 | `<iframe src="openmathboard.com/embed/TOKEN">` |
-| QR code for share link | ✅ | Teacher projects QR, students scan with phone |
+| QR code for share link | 📋 Planned | Teacher projects QR, students scan with phone |
 | Link expiration | ❌ Phase 2 | Links are permanent for MVP |
 
 **URL format:** `https://openmathboard.com/board/<shareToken>`
@@ -156,10 +173,10 @@ Board {
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Read-only live mirror | ✅ | Students see teacher drawing updated in near-real-time |
-| No login for students | ✅ | Access via share link |
-| Pan & zoom independently | ✅ | Students navigate the canvas independently of teacher |
-| "Follow teacher" button | ✅ | Toggle: lock student camera to teacher's viewport |
+| Read-only live mirror | 📋 Planned | Students see teacher drawing updated in near-real-time |
+| No login for students | 📋 Planned | Access via share link |
+| Pan & zoom independently | 📋 Planned | Students navigate the canvas independently of teacher |
+| "Follow teacher" button | 📋 Planned | Toggle: lock student camera to teacher's viewport |
 | See teacher's cursor | ❌ Phase 2 | Show teacher cursor position to students |
 | Student can annotate own copy | ❌ Phase 2 | Fork board for personal notes |
 
@@ -175,13 +192,13 @@ Board {
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Place text on canvas | ✅ NEW | Click to create text box, type, click away to commit |
-| Math symbols (basic) | ✅ NEW | ±, ², ³, √, π, θ, ∞, ≤, ≥, ≠ via emoji-style picker |
-| Font sizes | ✅ NEW | Small / Medium / Large |
-| Text color | ✅ NEW | Uses existing 6-color palette |
-| Move / resize text | ✅ NEW | Select tool, drag to move, handles to resize |
-| Edit existing text | ✅ NEW | Double-click to re-enter edit mode |
-| LaTeX rendering | ❌ Phase 2 | Render `$y = ax^2 + bx + c$` as proper math typography |
+| Place text on canvas | 📋 Planned | Click to create text box, type, click away to commit |
+| Math symbols (basic) | 📋 Planned | ±, ², ³, √, π, θ, ∞, ≤, ≥, ≠ via emoji-style picker |
+| Font sizes | 📋 Planned | Small / Medium / Large |
+| Text color | 📋 Planned | Uses existing 6-color palette |
+| Move / resize text | 📋 Planned | Select tool, drag to move, handles to resize |
+| Edit existing text | 📋 Planned | Double-click to re-enter edit mode |
+| LaTeX rendering | 📋 Planned | Render `$y = ax^2 + bx + c$` as proper math typography |
 
 **Why now:** Every competitor has text. Teachers need to write problem statements, label axes, annotate shapes. This is the #1 missing feature for "good-shape product" status.
 
@@ -191,10 +208,10 @@ Board {
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Blank canvas | ✅ | Default, as today |
-| Coordinate plane | ✅ NEW | Pre-placed axes object centered, grid on |
-| Graph paper (4-quadrant) | ✅ NEW | Grid on, axes visible, pre-set zoom for typical graphing |
-| Number line | ✅ NEW | Pre-placed number line, centered horizontally |
+| Blank canvas | 📋 Planned | Default, as today |
+| Coordinate plane | 📋 Planned | Pre-placed axes object centered, grid on |
+| Graph paper (4-quadrant) | 📋 Planned | Grid on, axes visible, pre-set zoom for typical graphing |
+| Number line | 📋 Planned | Pre-placed number line, centered horizontally |
 | Dot paper (isometric) | ❌ Phase 2 | For 3D geometry lessons |
 | Custom template (save current as template) | ❌ Phase 2 | |
 
@@ -206,11 +223,11 @@ Board {
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Dark theme | ✅ NEW | Dark background, light strokes, themed UI |
-| System preference detection | ✅ NEW | `prefers-color-scheme` media query |
-| Manual toggle | ✅ NEW | Button in toolbar |
-| Adapts canvas background | ✅ NEW | White → dark gray; grid color adjusts |
-| Stroke colors remain vibrant | ✅ NEW | Color palette adjusted for dark backgrounds |
+| Dark theme | 📋 Planned | Dark background, light strokes, themed UI |
+| System preference detection | 📋 Planned | `prefers-color-scheme` media query |
+| Manual toggle | 📋 Planned | Button in toolbar |
+| Adapts canvas background | 📋 Planned | White → dark gray; grid color adjusts |
+| Stroke colors remain vibrant | 📋 Planned | Color palette adjusted for dark backgrounds |
 
 ---
 
@@ -218,10 +235,10 @@ Board {
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Service worker | ✅ NEW | Cache app shell for offline use |
-| Installable (Add to Home Screen) | ✅ NEW | PWA manifest with icons |
-| Offline drawing | ✅ NEW | Uses IndexedDB, syncs when online |
-| Offline indicator | ✅ NEW | Banner: "You're offline. Changes will sync when connected." |
+| Service worker | 📋 Planned | Cache app shell for offline use |
+| Installable (Add to Home Screen) | 📋 Planned | PWA manifest with icons |
+| Offline drawing | 📋 Planned | Uses IndexedDB, syncs when online |
+| Offline indicator | 📋 Planned | Banner: "You're offline. Changes will sync when connected." |
 
 ---
 
@@ -229,12 +246,12 @@ Board {
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Rectangle tool | ✅ NEW | Basic shape, 4 corner anchors |
-| Triangle tool | ✅ NEW | 3 vertex anchors |
-| Snap to grid | ✅ NEW | Hold Shift while dragging → snap anchor to grid points |
-| Keyboard shortcut overlay | ✅ NEW | Press `?` → show all shortcuts |
-| SVG export | ✅ NEW | Vector format, great for printing math worksheets |
-| Undo/redo visual indicator | ✅ NEW | Ghost count on undo/redo buttons |
+| Rectangle tool | ✅ Implemented | Basic shape, 4 corner anchors |
+| Triangle tool | ✅ Implemented | 3 vertex anchors |
+| Snap to grid | 📋 Planned | Hold Shift while dragging → snap anchor to grid points |
+| Keyboard shortcut overlay | 📋 Planned | Press `?` → show all shortcuts |
+| SVG export | 📋 Planned | Vector format, great for printing math worksheets |
+| Undo/redo visual indicator | 📋 Planned | Ghost count on undo/redo buttons |
 
 ---
 
@@ -258,7 +275,7 @@ Board {
 | Desktop Chrome/Firefox/Edge | **Primary** (dashboard + editor) |
 | Android tablets | Supported |
 | Mobile phones | View-only (student view works, editor is desktop/tablet) |
-| PWA (installable) | ✅ NEW |
+| PWA (installable) | 📋 Planned |
 
 ---
 
@@ -275,7 +292,7 @@ src/
   ui/            — existing: toolbar, palette, export, etc.
   i18n/          — existing: i18n engine + strings
   NEW: auth/
-    auth.js      — Azure AD B2C login/logout, token management
+    auth.js      — Microsoft Entra External ID login/logout, token management
     session.js   — JWT handling, refresh, session state
   NEW: cloud/
     api.js       — REST API client (boards CRUD, sync)
@@ -306,7 +323,7 @@ api/
     cosmos.js        — Cosmos DB client (board metadata)
     blob.js          — Azure Blob Storage client (board data + thumbnails)
   middleware/
-    auth.js          — Validate Azure AD B2C JWT
+    auth.js          — Validate Microsoft Entra External ID JWT
     cors.js          — CORS config
 ```
 
@@ -315,28 +332,92 @@ api/
 | Resource | Purpose | New? |
 |----------|---------|------|
 | Container App | Serve frontend + API | Existing (extend) |
-| Azure AD B2C | User authentication | ✅ NEW |
-| Cosmos DB (serverless) | Board metadata | ✅ NEW |
-| Azure Blob Storage | Board data + thumbnails | ✅ NEW |
+| Microsoft Entra External ID | User authentication | 📋 Planned |
+| Cosmos DB (serverless) | Board metadata | 📋 Planned |
+| Azure Blob Storage | Board data + thumbnails | 📋 Planned |
 | Azure SignalR Service | Push updates (Phase 2) | ❌ Phase 2 |
 | Application Insights | Monitoring | Existing |
 | Grafana | Dashboards | Existing |
-| Azure CDN | Static asset caching | ✅ NEW (optional) |
+| Azure CDN | Static asset caching | 📋 Planned (optional) |
 
 ### API Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/boards` | ✅ | List user's boards (metadata only) |
-| `POST` | `/api/boards` | ✅ | Create new board |
-| `GET` | `/api/boards/:id` | ✅ | Get board metadata |
-| `GET` | `/api/boards/:id/data` | ✅ | Get board data (blob) |
-| `PUT` | `/api/boards/:id/data` | ✅ | Save board data (blob) |
-| `PUT` | `/api/boards/:id` | ✅ | Update board metadata (title, etc.) |
-| `DELETE` | `/api/boards/:id` | ✅ | Soft-delete board |
-| `POST` | `/api/boards/:id/share` | ✅ | Generate share token |
+| `GET` | `/api/boards` | 📋 Planned | List user's boards (metadata only) |
+| `POST` | `/api/boards` | 📋 Planned | Create new board |
+| `GET` | `/api/boards/:id` | 📋 Planned | Get board metadata |
+| `GET` | `/api/boards/:id/data` | 📋 Planned | Get board data (blob) |
+| `PUT` | `/api/boards/:id/data` | 📋 Planned | Save board data (blob) |
+| `PUT` | `/api/boards/:id` | 📋 Planned | Update board metadata (title, etc.) |
+| `DELETE` | `/api/boards/:id` | 📋 Planned | Soft-delete board |
+| `POST` | `/api/boards/:id/share` | 📋 Planned | Generate share token |
 | `GET` | `/api/share/:token` | ❌ | Public: get shared board data (read-only) |
 | `GET` | `/api/share/:token/camera` | ❌ | Public: get teacher's camera state (for follow mode) |
+
+---
+
+## 11. Course Recording
+
+| Feature | Status | Production requirement |
+|---------|--------|------------------------|
+| Visible-board video recording | 🟡 Partial | Canvas, imported images, active ink, and math objects render into a clean output stream |
+| Microphone audio | 🟡 Partial | Permission handling, mute, track-end detection, and audio-level feedback |
+| Face camera overlay | 🟡 Partial | Live preview, size, corner placement, preview privacy toggle, and recorded composition |
+| Pause/resume | 🟡 Partial | Timer excludes paused duration; lifecycle tested on real iOS |
+| Local MP4/WebM download | 🟡 Partial | MIME negotiation, playback review, retry, and explicit file-size feedback |
+| Discard with confirmation | ✅ Implemented | No output generated after confirmed discard |
+| Long-session crash recovery | 📋 Planned | Periodic MediaRecorder chunks persisted to IndexedDB |
+| Resumable cloud upload | 📋 Planned | Chunk upload, retry, finalization/transcoding, storage quotas, and playback URL |
+| Captions/transcript | 📋 Planned | Accessible transcript and optional searchable lesson text |
+| Recording library | 📋 Planned | Board association, title, thumbnail, retention, delete, and share controls |
+
+**MVP safety rule:** local browser recording is for short and medium lessons. Do not promise hour-long iOS recording until chunk checkpointing, interruption tests, and storage limits are implemented.
+
+---
+
+## 12. Unified Scene and Data Safety
+
+Every board-visible object must be represented in versioned scene state. DOM-only content is prohibited for production persistence.
+
+```text
+SceneObject
+  id · type · style · zIndex
+  render() · getBounds() · hitTest()
+  move() · resize()
+  serialize() · deserialize() · export()
+```
+
+| Requirement | Status | Acceptance criterion |
+|-------------|--------|----------------------|
+| Strokes and shapes in scene state | ✅ Implemented | Render, select, persist, and undo/redo |
+| Images in scene state | 📋 Planned | Reload, undo/redo, file export, cloud sync, mixed selection |
+| Text in scene state | 📋 Planned | Edit, select, serialize, export, and migrate |
+| Versioned board schema | 📋 Planned | Forward migration and safe fallback for unsupported versions |
+| IndexedDB board storage | 📋 Planned | Transactional board/blob storage and migration from localStorage |
+| Save-on-background | 📋 Planned | Flush on visibility/page lifecycle events with visible status |
+| Bounded history | 📋 Planned | Memory budget with deterministic undo availability |
+| Native board file | 📋 Planned | Round-trip all object types without loss |
+| Corruption recovery | 📋 Planned | Last-known-good snapshot and actionable recovery UI |
+
+---
+
+## 13. Production Non-Functional Requirements
+
+| Area | Requirement | Target |
+|------|-------------|--------|
+| Data integrity | No acknowledged edit lost after save state is shown | 99.99% |
+| Crash-free sessions | Client sessions without unhandled fatal error | ≥ 99.5% beta, ≥ 99.9% launch |
+| Input latency | Pen-to-pixel latency under normal board load | p95 < 50 ms |
+| Save latency | Local durable save after last edit | p95 < 1 s |
+| Cloud sync | Successful background sync after retries | ≥ 99.9% |
+| Share load | Read-only lesson interactive | p75 < 2 s |
+| Accessibility | Product UI | WCAG 2.2 AA |
+| Browser matrix | Automated | Chromium, Firefox, WebKit |
+| Physical devices | Release smoke | Current iPadOS Safari + Apple Pencil |
+| Recording | Short lesson completion | ≥ 99% for supported duration |
+| Security | Deployment gate | Tests, audit, image scan, staging smoke, rollback |
+| Observability | Client releases | Errors, save failures, recording failures, Web Vitals, release ID |
 
 ---
 
@@ -355,7 +436,6 @@ api/
 | Admin dashboard (school tier) | ❌ Phase 2 | Focus on individual teacher first |
 | Board version history | ❌ Phase 2 | Nice but not MVP |
 | Comments / annotations by students | ❌ Phase 2 | One-directional (teacher → student) for MVP |
-| LaTeX rendering | ❌ Phase 2 | Basic math symbols in text tool suffice for MVP |
 | Custom shape libraries | ❌ Phase 2 | Pre-built library first |
 | Notion/Obsidian integration | ❌ Future | Requires npm package (Phase 2+) |
 | Pressure-sensitive strokes | ❌ | Adds complexity to data model, minimal teaching value |
@@ -364,86 +444,110 @@ api/
 
 ## Implementation Phases
 
-### Phase 5 — Core Product Gaps (pre-cloud foundation)
-*~2 weeks*
+Estimates assume one experienced engineer using AI assistance heavily and include implementation, focused tests, review, and deployment. Real-device validation, migrations, cloud correctness, accessibility, and legal review do not compress at the same rate as isolated UI work.
 
-| Task | Est. Lines |
-|------|-----------|
-| 5.1 Text tool (create, edit, render, select, move) | ~300 |
-| 5.2 Rectangle tool (with 4 corner anchors) | ~100 |
-| 5.3 Dark mode (CSS variables, toggle, persist preference) | ~150 |
-| 5.4 File format: save/load `.openmathboard` JSON | ~100 |
-| 5.5 SVG export | ~200 |
-| 5.6 Keyboard shortcut overlay (`?`) | ~80 |
-| 5.7 Board templates (coordinate plane, number line, blank) | ~100 |
-| 5.8 Snap-to-grid (Shift modifier) | ~60 |
-| 5.9 PWA manifest + service worker | ~100 |
+### Phase 5A — Trustworthy Teacher Beta
 
-### Phase 6 — Authentication & Cloud
-*~3 weeks*
+| Task | Status | AI-assisted effort |
+|------|--------|---------------------|
+| Upgrade vulnerable dependencies and lockfile | 📋 Planned | 2–4 hours |
+| Add build/test/audit/smoke gates before deploy | 📋 Planned | 1–2 days |
+| Add WebKit and Firefox CI projects | 📋 Planned | 1–3 days plus exposed fixes |
+| Save-on-background and visible save status | 📋 Planned | 1–2 days |
+| Bound history memory | 📋 Planned | 0.5–1 day |
+| Frontend error/release telemetry | 📋 Planned | 1–2 days |
+| Unify images into scene state | 📋 Planned | 5–10 days |
+| Versioned scene schema and validation | 📋 Planned | 5–10 days |
+| IndexedDB storage and localStorage migration | 📋 Planned | 4–8 days |
+| Corruption recovery and last-known-good state | 📋 Planned | 4–7 days |
+| Correct all-shape export via central renderer | 📋 Planned | 1–3 days |
+| `.openmathboard` save/load | 📋 Planned | 3–5 days |
 
-| Task | Est. Lines |
-|------|-----------|
-| 6.1 Azure AD B2C tenant setup + config | Infra (Bicep) |
-| 6.2 Frontend auth module (login/logout/token) | ~200 |
-| 6.3 API scaffolding (Express or Azure Functions) | ~150 |
-| 6.4 Cosmos DB setup + board metadata CRUD | ~200 |
-| 6.5 Azure Blob Storage setup + board data upload/download | ~150 |
-| 6.6 Auto-save to cloud (debounced, ETags, offline queue) | ~250 |
-| 6.7 IndexedDB local cache for offline | ~150 |
-| 6.8 Dashboard UI (board list, create, rename, delete) | ~400 |
-| 6.9 Migrate localStorage boards to cloud on first login | ~80 |
-| 6.10 Thumbnail generation (client-side canvas → PNG → Blob) | ~60 |
+**Exit gate:** 100 repeated background/reload tests without content loss; 30-minute iPad sessions remain responsive; exported output matches the board; crash-free sessions ≥ 99.5%.
 
-### Phase 7 — Sharing & Student View
-*~2 weeks*
+### Phase 5B — Complete Lesson Creation
 
-| Task | Est. Lines |
-|------|-----------|
-| 7.1 Share link generation (nanoid token, Cosmos DB) | ~80 |
-| 7.2 QR code generation (client-side, lightweight lib) | ~50 |
-| 7.3 Read-only viewer page (stripped UI, pan/zoom only) | ~200 |
-| 7.4 Polling-based live update (5s interval, ETag/304) | ~100 |
-| 7.5 "Follow teacher" camera sync | ~80 |
-| 7.6 Share UI (button in toolbar, copy link, show QR) | ~100 |
+| Task | Status | AI-assisted effort |
+|------|--------|---------------------|
+| Basic text and math symbols | 📋 Planned | 5–8 days |
+| LaTeX/math typesetting | 📋 Planned | 5–10 days |
+| PDF import and annotation backgrounds | 📋 Planned | 5–10 days |
+| Pages/lesson scenes and navigator | 📋 Planned | 1–2 weeks |
+| Starter math templates | 📋 Planned | 2–4 days after schema |
+| SVG export | 📋 Planned | 4–7 days |
+| Multi-page PDF export | 📋 Planned | 4–8 days after pages |
+| PWA shell and update UX | 📋 Planned | 2–4 days |
+| Recording duration/size/interruption hardening | 📋 Planned | 3–6 days |
+| Recording chunk checkpointing to IndexedDB | 📋 Planned | 5–10 days |
+| First-run onboarding and shortcut help | 📋 Planned | 2–4 days |
 
-### Phase 8 — Polish & Launch Readiness
-*~1 week*
+**Exit gate:** new teacher creates a useful lesson in under five minutes; pilot teachers complete real lessons without help; week-4 pilot retention ≥ 30%.
 
-| Task | Est. Lines |
-|------|-----------|
-| 8.1 Loading states & error handling (API failures, offline) | ~100 |
-| 8.2 Toast notifications (saved, shared, error, offline) | ~50 |
-| 8.3 Onboarding flow (first-time user tooltip tour) | ~150 |
-| 8.4 Landing page (marketing, feature list, sign-up CTA) | ~300 |
-| 8.5 Privacy policy & terms of service pages | Content |
-| 8.6 Azure infra hardening (CORS, rate limiting, WAF) | Infra |
-| 8.7 E2E tests for auth, save, share flows | ~300 |
+### Phase 6 — Identity, Boards, and Cloud Sync
+
+| Task | Status | AI-assisted effort |
+|------|--------|---------------------|
+| Microsoft Entra External ID configuration | 📋 Planned | 5–10 days |
+| Board metadata/blob API with ETags | 📋 Planned | 2–3 weeks |
+| Offline queue, retries, and conflict handling | 📋 Planned | 1–2 weeks |
+| Dashboard, thumbnails, rename/duplicate/trash | 📋 Planned | 2–4 weeks |
+| Guest-board migration on sign-in | 📋 Planned | 2–4 days |
+| Cloud backups, quotas, telemetry, and load tests | 📋 Planned | 1–2 weeks |
+
+**Exit gate:** sync success ≥ 99.9%; cross-device board open works after offline edits; deletion/recovery and data export are verified.
+
+### Phase 7 — Sharing and Student View
+
+| Task | Status | AI-assisted effort |
+|------|--------|---------------------|
+| Revocable read-only share links | 📋 Planned | 1–2 weeks |
+| QR code and share UI | 📋 Planned | 2–4 days |
+| Stripped student viewer | 📋 Planned | 4–7 days |
+| Follow-teacher viewport updates | 📋 Planned | 4–7 days |
+| Recording upload/share | 📋 Planned | 3–6 weeks |
+| Abuse controls, expiration, and caching | 📋 Planned | 4–8 days |
+
+**Exit gate:** share view interactive in under two seconds; classroom access works behind shared school NAT; ≥ 25% of active teachers share weekly.
+
+### Phase 8 — School Readiness
+
+| Task | Status | AI-assisted effort |
+|------|--------|---------------------|
+| Google Classroom / Teams basic sharing | 📋 Planned | 1–2 weeks each |
+| LTI 1.3 / LMS integration | 📋 Planned | 3–6 weeks |
+| WCAG 2.2 AA remediation and independent audit | 📋 Planned | 3–6 weeks plus audit calendar |
+| Privacy, terms, DPA, FERPA/COPPA posture | 📋 Planned | 1–3 months with counsel |
+| Admin, audit log, retention, domain controls | 📋 Planned | 2–4 months |
+| CDN, staging, rollback, status page, scaling | 📋 Planned | 2–4 weeks incrementally |
 
 ---
 
-## Total Estimated Effort (v3)
+## AI-Assisted Effort Summary
 
-| Phase | New Lines | Duration |
-|-------|-----------|----------|
-| Phase 5 — Core Gaps | ~1200 | ~2 weeks |
-| Phase 6 — Auth & Cloud | ~1700 | ~3 weeks |
-| Phase 7 — Sharing & Student View | ~600 | ~2 weeks |
-| Phase 8 — Polish & Launch | ~900 | ~1 week |
-| **Total v3** | **~4400** | **~8 weeks** |
+| Milestone | Focused team estimate |
+|-----------|-----------------------|
+| Low-hanging safety improvements | 1 week |
+| Trustworthy closed teacher beta | 6–10 weeks |
+| Strong local lesson-creation product | 2–3 months |
+| Cloud-backed individual-teacher product | 3–5 months |
+| School-ready platform | 9–15 months |
 
-Combined with v2 (~4500 lines): Total codebase ~9000 lines across ~30 modules.
+Recent feature and bug-fix velocity supports aggressive estimates for contained UI work. The schedule must still reserve time for migrations, iOS soak testing, security, accessibility, legal review, and teacher validation.
 
 ---
 
-## Success Metrics (Launch)
+## Success Metrics
 
-| Metric | Target |
-|--------|--------|
-| Time to first draw (guest) | < 2 seconds |
-| Time to first draw (authenticated) | < 5 seconds (login flow) |
-| Auto-save latency | < 3 seconds after last change |
-| Share link load time (student) | < 2 seconds |
-| Student view update latency | < 7 seconds (polling) |
-| Lighthouse score (PWA) | > 90 |
-| Board file size (typical lesson) | < 500 KB |
+| Metric | Beta target | Launch target |
+|--------|-------------|---------------|
+| Time to first draw | < 2 s | < 2 s |
+| Time to first useful lesson | < 10 min | < 5 min |
+| Local durable-save latency | p95 < 1 s | p95 < 1 s |
+| Crash-free sessions | ≥ 99.5% | ≥ 99.9% |
+| Recording completion (supported duration) | ≥ 98% | ≥ 99% |
+| Cloud sync success | — | ≥ 99.9% |
+| Share view interactive | — | p75 < 2 s |
+| Week-1 teacher retention | ≥ 40% pilot | ≥ 45% |
+| Week-4 teacher retention | ≥ 30% pilot | ≥ 35% |
+| Active teachers sharing weekly | — | ≥ 25% |
+| North star | Weekly lessons created and shared by retained teachers | Growth with stable retention |
