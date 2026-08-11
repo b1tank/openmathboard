@@ -57,3 +57,30 @@ jobs:
             --name ${{ secrets.CONTAINER_APP_NAME }} \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --image ${{ secrets.ACR_NAME }}.azurecr.io/openmathboard:${{ github.sha }}
+
+      - name: Verify deployed revision
+        run: |
+          APP_NAME="${{ secrets.CONTAINER_APP_NAME }}"
+          RESOURCE_GROUP="${{ secrets.AZURE_RESOURCE_GROUP }}"
+          FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)
+          REVISION=$(az containerapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --query properties.latestRevisionName -o tsv)
+
+          echo "### Deployment smoke test" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Revision: \`$REVISION\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: https://$FQDN" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Image SHA: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+          for attempt in $(seq 1 18); do
+            if HEALTH=$(curl --fail --silent --show-error --max-time 10 "https://$FQDN/health") && [ "$HEALTH" = "OK" ] && \
+               curl --fail --silent --show-error --max-time 10 "https://$FQDN/" | grep -q '<title>'; then
+              echo "Smoke test passed on attempt $attempt"
+              echo "- Result: passed" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Smoke test attempt $attempt failed; retrying in 10 seconds"
+            sleep 10
+          done
+
+          echo "- Result: failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployment smoke test failed for revision $REVISION" >&2
+          exit 1
