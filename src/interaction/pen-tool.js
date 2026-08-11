@@ -20,6 +20,7 @@ import { perfReset, perfSampleReceived, perfSampleCommitted, perfFrameStart, per
 import { findStrokeAtPoint, updateSelectionCursor } from './selection.js';
 import { setTool } from './tools.js';
 import { updatePropertyPanel } from '../ui/property-panel.js';
+import { findImportedImageAtPoint, selectImportedImage } from '../ui/images.js';
 
 // ============ Render loop ============
 let renderLoopActive = false;
@@ -89,6 +90,11 @@ function beginStroke(pos) {
 }
 
 export function onPenPointerDown(pos) {
+	const image = findImportedImageAtPoint(pos.screenX, pos.screenY);
+	if (image) {
+		pendingTapSelection = { image, startPos: pos };
+		return;
+	}
 	const strokeIdx = findStrokeAtPoint(pos);
 	if (strokeIdx !== -1) {
 		// Wait briefly before deciding: a tap selects, while movement starts a
@@ -125,9 +131,14 @@ export function onPenPointerMove(pos) {
 
 export function onPenPointerUp(pos) {
 	if (pendingTapSelection) {
-		const { strokeIdx } = pendingTapSelection;
+		const { strokeIdx, image } = pendingTapSelection;
 		pendingTapSelection = null;
-		if (getStrokes()[strokeIdx]) {
+		if (image?.isConnected) {
+			setTool(TOOLS.SELECT);
+			selectImportedImage(image);
+			updateSelectionCursor();
+			redrawCanvas();
+		} else if (getStrokes()[strokeIdx]) {
 			setTool(TOOLS.SELECT);
 			setSelectedStrokes([strokeIdx]);
 			updateSelectionCursor();

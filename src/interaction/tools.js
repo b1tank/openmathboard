@@ -13,6 +13,7 @@ export function setTool(tool) {
 	// Clear selection when switching away from select tool
 	if (getCurrentTool() === TOOLS.SELECT && tool !== TOOLS.SELECT) {
 		clearSelection();
+		document.querySelectorAll('.imported-image.selected').forEach(image => image.classList.remove('selected'));
 	}
 
 	setCurrentTool(tool);

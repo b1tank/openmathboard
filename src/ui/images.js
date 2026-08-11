@@ -1,8 +1,10 @@
 // OpenMathBoard — Image import, drag/drop, paste
-import { getCanvasRect, getDomRefs } from '../core/state.js';
+import { getCanvasRect, getDomRefs, setSelectedStrokes } from '../core/state.js';
 import { t } from '../i18n/i18n.js';
 import { showToast } from './toast.js';
 import { hideHeroSection } from './hero.js';
+import { hidePropertyPanel } from './property-panel.js';
+import { redrawLive } from '../canvas/renderer.js';
 
 export function setupDropZone() {
 	const refs = getDomRefs();
@@ -83,9 +85,12 @@ export function addImageToCanvas(src) {
 		imgEl.src = src;
 		wrapper.appendChild(imgEl);
 
-		const resizeHandle = document.createElement('div');
-		resizeHandle.className = 'resize-handle';
-		wrapper.appendChild(resizeHandle);
+		for (const corner of ['nw', 'ne', 'sw', 'se']) {
+			const resizeHandle = document.createElement('div');
+			resizeHandle.className = `resize-handle resize-${corner}`;
+			resizeHandle.dataset.corner = corner;
+			wrapper.appendChild(resizeHandle);
+		}
 
 		const deleteHandle = document.createElement('div');
 		deleteHandle.className = 'delete-handle';
@@ -97,47 +102,101 @@ export function addImageToCanvas(src) {
 		});
 		wrapper.appendChild(deleteHandle);
 
-		setupImageDrag(wrapper);
+		setupImageInteraction(wrapper);
 		refs.imagesLayer.appendChild(wrapper);
 		showToast(t('toastImageAdded'));
 	};
 }
 
-function setupImageDrag(wrapper) {
+export function selectImportedImage(wrapper) {
+	if (!wrapper?.isConnected) return;
+	document.querySelectorAll('.imported-image').forEach(el => el.classList.toggle('selected', el === wrapper));
+	setSelectedStrokes([]);
+	hidePropertyPanel();
+	redrawLive();
+}
+
+export function findImportedImageAtPoint(screenX, screenY) {
+	if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) return null;
+	const refs = getDomRefs();
+	const images = [...(refs.imagesLayer?.querySelectorAll('.imported-image') || [])];
+	for (let i = images.length - 1; i >= 0; i--) {
+		const image = images[i];
+		if (screenX >= image.offsetLeft && screenX <= image.offsetLeft + image.offsetWidth &&
+			screenY >= image.offsetTop && screenY <= image.offsetTop + image.offsetHeight) return image;
+	}
+	return null;
+}
+
+function setupImageInteraction(wrapper) {
 	let isDragging = false;
 	let startX, startY, startLeft, startTop;
 
 	wrapper.addEventListener('pointerdown', (e) => {
-		if (e.target.className === 'resize-handle' || e.target.className === 'delete-handle') return;
-
-		document.querySelectorAll('.imported-image').forEach(el => el.classList.remove('selected'));
-		wrapper.classList.add('selected');
-
+		if (e.target.closest('.resize-handle, .delete-handle')) return;
+		selectImportedImage(wrapper);
 		isDragging = true;
 		startX = e.clientX;
 		startY = e.clientY;
 		startLeft = wrapper.offsetLeft;
 		startTop = wrapper.offsetTop;
 		wrapper.setPointerCapture(e.pointerId);
+		e.preventDefault();
 	});
 
 	wrapper.addEventListener('pointermove', (e) => {
 		if (!isDragging) return;
-		const dx = e.clientX - startX;
-		const dy = e.clientY - startY;
-		wrapper.style.left = (startLeft + dx) + 'px';
-		wrapper.style.top = (startTop + dy) + 'px';
+		wrapper.style.left = (startLeft + e.clientX - startX) + 'px';
+		wrapper.style.top = (startTop + e.clientY - startY) + 'px';
 	});
 
-	wrapper.addEventListener('pointerup', () => {
-		isDragging = false;
-	});
+	wrapper.addEventListener('pointerup', () => { isDragging = false; });
+	wrapper.addEventListener('pointercancel', () => { isDragging = false; });
+
+	wrapper.querySelectorAll('.resize-handle').forEach(handle => setupResizeHandle(wrapper, handle));
 
 	document.addEventListener('click', (e) => {
-		if (!wrapper.contains(e.target)) {
-			wrapper.classList.remove('selected');
-		}
+		if (wrapper.contains(e.target)) return;
+		// Pen-mode tap-to-select is routed through the live canvas underneath the
+		// image, so the click target is not the wrapper even though the coordinates
+		// are inside it. Preserve the selection for that synthesized tap.
+		const rect = wrapper.getBoundingClientRect();
+		const inside = e.clientX >= rect.left && e.clientX <= rect.right &&
+			e.clientY >= rect.top && e.clientY <= rect.bottom;
+		if (!inside) wrapper.classList.remove('selected');
 	});
+}
+
+function setupResizeHandle(wrapper, handle) {
+	let resizing = false;
+	let startX, startY, startWidth, startHeight, startLeft, startTop;
+	handle.addEventListener('pointerdown', e => {
+		e.stopPropagation();
+		e.preventDefault();
+		selectImportedImage(wrapper);
+		resizing = true;
+		startX = e.clientX; startY = e.clientY;
+		startWidth = wrapper.offsetWidth; startHeight = wrapper.offsetHeight;
+		startLeft = wrapper.offsetLeft; startTop = wrapper.offsetTop;
+		handle.setPointerCapture(e.pointerId);
+	});
+	handle.addEventListener('pointermove', e => {
+		if (!resizing) return;
+		const corner = handle.dataset.corner;
+		const directionX = corner.includes('w') ? -1 : 1;
+		const directionY = corner.includes('n') ? -1 : 1;
+		const scaleX = directionX * (e.clientX - startX) / Math.max(1, startWidth);
+		const scaleY = directionY * (e.clientY - startY) / Math.max(1, startHeight);
+		const scale = Math.max(40 / startWidth, 1 + (scaleX + scaleY) / 2);
+		const width = startWidth * scale;
+		const height = startHeight * scale;
+		wrapper.style.width = width + 'px';
+		if (corner.includes('w')) wrapper.style.left = (startLeft + startWidth - width) + 'px';
+		if (corner.includes('n')) wrapper.style.top = (startTop + startHeight - height) + 'px';
+		e.preventDefault();
+	});
+	handle.addEventListener('pointerup', () => { resizing = false; });
+	handle.addEventListener('pointercancel', () => { resizing = false; });
 }
 
 export function setupClipboard() {

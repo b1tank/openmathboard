@@ -48,6 +48,9 @@ function renderLoopTick() {
 // ============ Select tool handlers ============
 
 export function onSelectPointerDown(pos) {
+	// Pointer events reaching the canvas are outside any image (selected images
+	// sit above it in Select mode), so clear their DOM selection first.
+	document.querySelectorAll('.imported-image.selected').forEach(image => image.classList.remove('selected'));
 	const selected = getSelectedStrokes();
 	const strokes = getStrokes();
 	const camera = getCamera();
