@@ -1025,7 +1025,33 @@ html, body {
 .recording-face-preview.live-preview-off { opacity: 0; pointer-events: none; }
 #recordingOutputCanvas { display: none !important; }
 
+.bottom-sheet-handle { display: none; }
+
 @media (max-width: 600px) {
+  .mobile-bottom-sheet.bottom-sheet-dragging { transition: none !important; }
+  .mobile-bottom-sheet.bottom-sheet-snapping { transition: transform .2s ease-out !important; }
+  .bottom-sheet-handle {
+    display: flex;
+    width: 64px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    margin: -12px auto 2px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    touch-action: none;
+    cursor: grab;
+  }
+  .bottom-sheet-handle span {
+    display: block;
+    width: 36px;
+    height: 5px;
+    border-radius: 5px;
+    background: #cbd5e1;
+  }
+  .bottom-sheet-handle:active span { background: #94a3b8; }
+
   .mobile-tools .color-picker,
   .mobile-tools .stroke-picker,
   #dashBtnMobile { display: none !important; }
@@ -1040,17 +1066,6 @@ html, body {
     border: 1px solid #e2e8f0;
     border-radius: 18px;
     box-shadow: 0 12px 36px rgba(15, 23, 42, .24);
-  }
-  .recording-menu::before {
-    content: '';
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    width: 34px;
-    height: 4px;
-    border-radius: 4px;
-    background: #cbd5e1;
-    transform: translateX(-50%);
   }
   .recording-face-preview { width: 30%; border-radius: 12px; }
 }

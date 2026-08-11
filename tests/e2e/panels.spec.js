@@ -2,6 +2,31 @@ import { test, expect } from '@playwright/test';
 import { waitForCanvas } from './helpers.js';
 
 test.describe('Floating panels', () => {
+	async function pullDown(page, handleSelector) {
+		const handle = await page.locator(handleSelector).boundingBox();
+		await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+		await page.mouse.down();
+		await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 + 180, { steps: 6 });
+		await page.mouse.up();
+	}
+
+	test('mobile bottom sheets can be pulled down to dismiss', async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/');
+		await waitForCanvas(page);
+
+		await page.locator('#recordBtnMobile').click();
+		await expect(page.locator('#recordingMenu > .bottom-sheet-handle')).toBeVisible();
+		await pullDown(page, '#recordingMenu > .bottom-sheet-handle');
+		await expect(page.locator('#recordingMenu')).not.toHaveClass(/show/);
+
+		await page.locator('#shapePaletteBtnMobile').click();
+		await expect(page.locator('#shapePalette > .bottom-sheet-handle')).toBeVisible();
+		await pullDown(page, '#shapePalette > .bottom-sheet-handle');
+		await expect(page.locator('#shapePalette')).not.toHaveClass(/show/);
+		await expect(page.locator('#shapePaletteBtnMobile')).not.toHaveClass(/active/);
+	});
+
 	test('mobile properties stay centered near the shape and yield to the shape picker', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await page.goto('/');

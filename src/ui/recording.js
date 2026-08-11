@@ -6,6 +6,7 @@ import { drawStroke } from '../canvas/renderer.js';
 import { closeShapePaletteWithUI } from './palette.js';
 import { hidePropertyPanel, updatePropertyPanel } from './property-panel.js';
 import { t } from '../i18n/i18n.js';
+import { makeBottomSheetDismissible } from './bottom-sheet.js';
 
 const MIME_CANDIDATES = [
 	'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
@@ -108,10 +109,16 @@ async function startCameraPreview() {
 		if (!stream.getVideoTracks().length) throw new Error(t('recordCameraUnavailable'));
 		cameraPreviewStream = stream;
 		facePreview.srcObject = stream;
+		// Position while invisible before play() yields to Safari. Revealing first
+		// lets one frame paint at the absolute element's fallback top-left origin.
+		facePreview.style.visibility = 'hidden';
 		facePreview.hidden = false;
-		await facePreview.play();
 		updateLivePreview();
 		applyFacePreviewPosition();
+		await facePreview.play();
+		applyFacePreviewPosition();
+		await new Promise(resolve => requestAnimationFrame(resolve));
+		facePreview.style.visibility = '';
 		return stream;
 	})();
 	try {
@@ -126,6 +133,7 @@ function stopCameraPreview() {
 	cameraPreviewStream = null;
 	facePreview.srcObject = null;
 	facePreview.hidden = true;
+	facePreview.style.visibility = '';
 }
 
 async function handleFaceToggle() {
@@ -513,6 +521,11 @@ export function initRecording() {
 	outputCanvas = document.getElementById('recordingOutputCanvas');
 	outputCtx = outputCanvas.getContext('2d');
 	facePreview = document.getElementById('recordingFacePreview');
+	makeBottomSheetDismissible(menu, () => {
+		menu.classList.remove('show');
+		requestAnimationFrame(applyFacePreviewPosition);
+		if (!recorder) updatePropertyPanel();
+	});
 	const { buttons, faceToggle, livePreviewToggle, startBtn, pauseBtn, stopBtn, discardBtn } = elements();
 	buttons.forEach(button => button.addEventListener('click', event => { event.stopPropagation(); toggleMenu(); }));
 	faceToggle.addEventListener('change', handleFaceToggle);

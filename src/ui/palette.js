@@ -17,6 +17,7 @@ import { saveToHistory } from '../core/history.js';
 import { hideHeroSection } from './hero.js';
 import { t } from '../i18n/i18n.js';
 import { hidePropertyPanel, updatePropertyPanel } from './property-panel.js';
+import { makeBottomSheetDismissible } from './bottom-sheet.js';
 
 let paletteEl = null;
 let isOpen = false;
@@ -73,6 +74,7 @@ export function initShapePalette() {
 	}
 
 	buildPalette();
+	makeBottomSheetDismissible(paletteEl, closeShapePaletteWithUI);
 
 	// The picker is transient: the next direct canvas action dismisses it. This
 	// listener runs after the canvas tool handler, so selection/property state is
