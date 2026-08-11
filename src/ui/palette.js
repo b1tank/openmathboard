@@ -55,7 +55,7 @@ const SHAPE_ICONS = {
 	triangle: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><polygon points="16,4 4,28 28,28"/></svg>',
 	circle: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="12"/></svg>',
 	ellipse: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="16" cy="16" rx="14" ry="9"/></svg>',
-	parabola: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 28 Q16 0 28 28"/></svg>',
+	parabola: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4 Q16 32 28 4"/></svg>',
 	sine: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16 C8 4 12 4 16 16 S24 28 30 16"/></svg>',
 	cosine: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8 C8 8 8 24 16 24 S24 8 30 8"/></svg>',
 	arrow: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="16" x2="24" y2="16"/><polyline points="20 10 26 16 20 22"/></svg>',

@@ -5,7 +5,7 @@
 //   Ellipse:    rx-east, rx-west, ry-north, ry-south + rotation
 //   Line:       p1, p2 + rotation
 //   Arrow:      p1, p2 + rotation
-//   Parabola:   vertex, left, right + rotation
+//   Parabola:   vertical-scale, horizontal-scale, left, right + rotation
 //   Sine/Cos:   left, right, peak, valley, period + rotation
 //   Axes:       4 arm endpoints + rotation
 //   Freehand:   stretch-n/s/e/w + rotation
@@ -120,9 +120,13 @@ function getShapeAnchors(obj) {
 			];
 		case 'parabola':
 			return [
-				{ id: 'vertex', x: s.h, y: s.k, type: 'curve' },
-				{ id: 'left',  x: s.xMin, y: s.a * (s.xMin - s.h) ** 2 + s.k, type: 'curve' },
-				{ id: 'right', x: s.xMax, y: s.a * (s.xMax - s.h) ** 2 + s.k, type: 'curve' },
+				// Diamond changes vertical height while preserving the endpoint baseline.
+				{ id: 'vertical-scale', x: s.h, y: s.k, type: 'curve' },
+				// Square changes horizontal width symmetrically around the axis.
+				{ id: 'horizontal-scale', x: s.xMax, y: s.k, type: 'scale' },
+				// Endpoint circles crop ("eat") the visible domain without reshaping it.
+				{ id: 'left',  x: s.xMin, y: s.a * (s.xMin - s.h) ** 2 + s.k, type: 'endpoint' },
+				{ id: 'right', x: s.xMax, y: s.a * (s.xMax - s.h) ** 2 + s.k, type: 'endpoint' },
 			];
 		case 'hyperbola':
 			return [
@@ -135,12 +139,13 @@ function getShapeAnchors(obj) {
 			const midX = (s.xMin + s.xMax) / 2;
 			return [
 				{ id: 'left',   x: s.xMin, y: s.D, type: 'endpoint' },
+				{ id: 'right',  x: s.xMax, y: s.D, type: 'endpoint' },
 				{ id: 'peak',   x: midX, y: s.D - s.A, type: 'curve' },
 				{ id: 'valley', x: midX, y: s.D + s.A, type: 'curve' },
 				{ id: 'midline', x: midX, y: s.D, type: 'center' },
 				// Period is an edge-attached scrubber, not a literal wavelength marker.
 				// It stays reachable even when the mathematical period is very large.
-				{ id: 'period', x: s.xMax, y: s.D, type: 'scale' },
+				{ id: 'period', x: s.xMin + (s.xMax - s.xMin) * 0.75, y: s.D, type: 'scale' },
 			];
 		}
 		case 'axes': {
@@ -204,7 +209,7 @@ export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 
 	// Parameters are stored in unrotated coordinates. Movement controls follow
 	// the pointer in world space; resize controls need the inverse rotation.
-	const localPos = ['center', 'vertex', 'midline'].includes(anchorId)
+	const localPos = ['center', 'vertical-scale', 'midline'].includes(anchorId)
 		? newWorldPos
 		: toUnrotatedPosition(obj, newWorldPos);
 
@@ -261,38 +266,39 @@ export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 			break;
 		}
 		case 'parabola':
-			if (anchorId === 'vertex') {
-				const newH = Math.max(s.xMin + 1, Math.min(s.xMax - 1, newWorldPos.x));
-				s.h = newH;
-				s.k = newWorldPos.y;
-				if (dragInfo && dragInfo.savedEndpointYLeft !== undefined) {
-					const dxL = s.xMin - newH;
-					const dxR = s.xMax - newH;
-					const yL = dragInfo.savedEndpointYLeft;
-					const yR = dragInfo.savedEndpointYRight;
-					if (Math.abs(dxL) >= Math.abs(dxR) && dxL * dxL > 1) {
-						s.a = (yL - s.k) / (dxL * dxL);
-					} else if (dxR * dxR > 1) {
-						s.a = (yR - s.k) / (dxR * dxR);
-					}
+			if (anchorId === 'vertical-scale') {
+				const yL = dragInfo?.savedEndpointYLeft ?? s.a * (s.xMin - s.h) ** 2 + s.k;
+				const yR = dragInfo?.savedEndpointYRight ?? s.a * (s.xMax - s.h) ** 2 + s.k;
+				// Keep the visual opening direction when the control approaches/crosses
+				// the endpoint baseline. Canvas Y grows downward, so a < 0 opens upward.
+				s.k = s.a < 0
+					? Math.max(Math.max(yL, yR) + 5, newWorldPos.y)
+					: Math.min(Math.min(yL, yR) - 5, newWorldPos.y);
+				const dxL = s.xMin - s.h;
+				const dxR = s.xMax - s.h;
+				if (Math.abs(dxL) >= Math.abs(dxR) && dxL * dxL > 1) {
+					s.a = (yL - s.k) / (dxL * dxL);
+				} else if (dxR * dxR > 1) {
+					s.a = (yR - s.k) / (dxR * dxR);
 				}
 			}
-			if (anchorId === 'left') {
-				s.xMin = Math.min(newWorldPos.x, s.h - 5);
-				const dx = s.xMin - s.h;
-				s.a = (newWorldPos.y - s.k) / (dx * dx);
+			if (anchorId === 'horizontal-scale') {
+				const oldDx = s.xMax - s.h;
+				const endpointY = s.a * oldDx * oldDx + s.k;
+				const halfWidth = Math.max(10, Math.abs(newWorldPos.x - s.h));
+				s.xMin = s.h - halfWidth;
+				s.xMax = s.h + halfWidth;
+				s.a = (endpointY - s.k) / (halfWidth * halfWidth);
 			}
-			if (anchorId === 'right') {
-				s.xMax = Math.max(newWorldPos.x, s.h + 5);
-				const dx = s.xMax - s.h;
-				s.a = (newWorldPos.y - s.k) / (dx * dx);
-			}
+			if (anchorId === 'left') s.xMin = Math.min(newWorldPos.x, s.h - 5);
+			if (anchorId === 'right') s.xMax = Math.max(newWorldPos.x, s.h + 5);
 			regenerateParabolaPoints(obj);
 			break;
 		case 'sine':
 		case 'cosine': {
 			const midX = (s.xMin + s.xMax) / 2;
 			if (anchorId === 'left')  { s.xMin = Math.min(newWorldPos.x, s.xMax - 20); }
+			if (anchorId === 'right') { s.xMax = Math.max(newWorldPos.x, s.xMin + 20); }
 			if (anchorId === 'peak')  { s.A = Math.max(5, s.D - newWorldPos.y); }
 			if (anchorId === 'valley') { s.A = Math.max(5, newWorldPos.y - s.D); }
 			if (anchorId === 'midline') {

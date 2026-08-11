@@ -66,10 +66,10 @@ export function onSelectPointerDown(pos) {
 				const info = { strokeIdx: idx, anchorId: anchor.id };
 				if (stroke.shape && ['sine', 'cosine'].includes(stroke.shape.type) && anchor.id === 'period') {
 					info.savedPeriod = (2 * Math.PI) / Math.abs(stroke.shape.B || 0.01);
-					info.periodDragStartX = stroke.shape.xMax;
+					info.periodDragStartX = anchor.x;
 					info.cameraZoom = camera.zoom;
 				}
-				if (stroke.shape && stroke.shape.type === 'parabola' && anchor.id === 'vertex') {
+				if (stroke.shape && stroke.shape.type === 'parabola' && anchor.id === 'vertical-scale') {
 					const s = stroke.shape;
 					info.savedEndpointYLeft = s.a * (s.xMin - s.h) ** 2 + s.k;
 					info.savedEndpointYRight = s.a * (s.xMax - s.h) ** 2 + s.k;

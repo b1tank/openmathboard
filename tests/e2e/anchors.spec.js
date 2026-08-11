@@ -10,6 +10,7 @@ test.describe('Shape anchors', () => {
 	test('center and curve anchors update complete shape geometry', async ({ page }) => {
 		const result = await page.evaluate(async () => {
 			const { getAnchors, findAnchorAtPoint, onAnchorDrag } = await import('/src/canvas/anchors.js');
+			const { createDefaultParabola } = await import('/src/shapes/parabola.js');
 			const camera = { x: 0, y: 0, zoom: 1 };
 			const circle = {
 				width: 4,
@@ -18,7 +19,7 @@ test.describe('Shape anchors', () => {
 			};
 			const parabola = {
 				width: 4,
-				shape: { type: 'parabola', h: 100, k: 100, a: 0.01, xMin: 50, xMax: 150 },
+				shape: { type: 'parabola', h: 100, k: 100, a: -0.01, xMin: 50, xMax: 150 },
 				points: []
 			};
 			const wave = {
@@ -31,34 +32,59 @@ test.describe('Shape anchors', () => {
 			};
 
 			const circleAnchorIds = getAnchors(circle, camera).map(anchor => anchor.id);
+			const parabolaAnchorIds = getAnchors(parabola, camera).map(anchor => anchor.id);
 			onAnchorDrag(circle, 'center', { x: 140, y: 130 });
-			onAnchorDrag(parabola, 'right', { x: 180, y: 164 });
-			const waveEdgeHandle = findAnchorAtPoint(wave, { x: 300, y: 100 }, camera)?.id;
-			onAnchorDrag(wave, 'period', { x: 460, y: 100 }, {
-				savedPeriod: 200, periodDragStartX: 300, cameraZoom: 1
+			// Vertical diamond reduces height while retaining an upward opening.
+			onAnchorDrag(parabola, 'vertical-scale', { x: 100, y: 90 }, {
+				savedEndpointYLeft: 75, savedEndpointYRight: 75
+			});
+			const aAfterVerticalScale = parabola.shape.a;
+			// Endpoint circles crop only; they do not reshape the curve.
+			onAnchorDrag(parabola, 'right', { x: 180, y: 20 });
+			const aAfterCrop = parabola.shape.a;
+			const oldRightY = parabola.shape.a * (parabola.shape.xMax - parabola.shape.h) ** 2 + parabola.shape.k;
+			onAnchorDrag(parabola, 'horizontal-scale', { x: 160, y: 90 });
+			const newRightY = parabola.shape.a * (parabola.shape.xMax - parabola.shape.h) ** 2 + parabola.shape.k;
+			const waveRightHandle = findAnchorAtPoint(wave, { x: 300, y: 100 }, camera)?.id;
+			const periodStartX = getAnchors(wave, camera).find(anchor => anchor.id === 'period').x;
+			onAnchorDrag(wave, 'period', { x: periodStartX + 160, y: 100 }, {
+				savedPeriod: 200, periodDragStartX: periodStartX, cameraZoom: 1
 			});
 			const periodAfterScrub = (2 * Math.PI) / wave.shape.B;
 			const periodAnchorX = getAnchors(wave, camera).find(anchor => anchor.id === 'period')?.x;
 			onAnchorDrag(wave, 'midline', { x: 150, y: 130 });
 
 			return {
+				defaultParabolaA: createDefaultParabola(0, 0).shape.a,
 				circleAnchorIds,
 				circle: circle.shape,
+				parabolaAnchorIds,
 				parabola: parabola.shape,
-				waveEdgeHandle,
+				aAfterVerticalScale,
+				aAfterCrop,
+				oldRightY,
+				newRightY,
+				waveRightHandle,
 				periodAfterScrub,
 				periodAnchorX,
 				wave: wave.shape
 			};
 		});
 
+		expect(result.defaultParabolaA).toBeLessThan(0);
 		expect(result.circleAnchorIds).toContain('center');
 		expect(result.circle).toMatchObject({ cx: 140, cy: 130, r: 40 });
-		expect(result.parabola.xMax).toBe(180);
-		expect(result.parabola.a).toBeCloseTo(0.01, 8);
-		expect(result.waveEdgeHandle).toBe('period');
+		expect(result.parabolaAnchorIds).toEqual(expect.arrayContaining([
+			'vertical-scale', 'horizontal-scale', 'left', 'right'
+		]));
+		expect(result.aAfterVerticalScale).toBeLessThan(0);
+		expect(result.aAfterCrop).toBeCloseTo(result.aAfterVerticalScale, 8);
+		expect(result.parabola.xMin).toBe(40);
+		expect(result.parabola.xMax).toBe(160);
+		expect(result.newRightY).toBeCloseTo(result.oldRightY, 8);
+		expect(result.waveRightHandle).toBe('right');
 		expect(result.periodAfterScrub).toBeCloseTo(200 * Math.E, 8);
-		expect(result.periodAnchorX).toBe(300);
+		expect(result.periodAnchorX).toBe(200);
 		expect(result.wave).toMatchObject({ C: 150, D: 130, xMin: -50, xMax: 350 });
 	});
 

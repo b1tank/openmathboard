@@ -17,7 +17,8 @@ export function renderParabola(ctx, obj) {
 
 export function createDefaultParabola(worldX, worldY) {
 	const h = worldX, k = worldY;
-	const a = 0.01;
+	// Canvas Y increases downward, so a negative coefficient opens upward.
+	const a = -0.01;
 	const xMin = worldX - 100, xMax = worldX + 100;
 	return {
 		id: crypto.randomUUID(),
