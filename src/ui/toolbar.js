@@ -1,5 +1,8 @@
 // OpenMathBoard — Toolbar setup, dropdowns, mobile menu
-import { getDomRefs, getCurrentDash, getStrokes, setStrokes } from '../core/state.js';
+import {
+	getDomRefs, getCurrentDash, getCurrentColor, getCurrentStrokeWidth,
+	getStrokes, setStrokes
+} from '../core/state.js';
 import { setTool, setColor, setStrokeWidth, setDash } from '../interaction/tools.js';
 import { TOOLS } from '../core/state.js';
 import { undo, redo, saveToHistory } from '../core/history.js';
@@ -8,8 +11,8 @@ import { copyToClipboard, saveImage } from './export.js';
 import { handleFileSelect } from './images.js';
 import { t } from '../i18n/i18n.js';
 import { showToast } from './toast.js';
-import { setLanguage, applyTranslations } from '../i18n/i18n.js';
-import { toggleShapePaletteWithUI } from './palette.js';
+import { setLanguage, getCurrentLang, applyTranslations } from '../i18n/i18n.js';
+import { toggleShapePaletteWithUI, closeShapePaletteWithUI } from './palette.js';
 
 
 export function setupToolbarListeners() {
@@ -71,8 +74,8 @@ export function setupToolbarListeners() {
 	// Close dropdowns
 	document.addEventListener('click', (e) => {
 		const target = e.target;
-		const isDropdownClick = target.closest('.color-dropdown, .stroke-dropdown, .lang-dropdown, .menu-dropdown');
-		const isPickerClick = target.closest('.color-picker, .stroke-picker, .lang-btn, .hamburger-btn');
+		const isDropdownClick = target.closest('.color-dropdown, .stroke-dropdown, .lang-dropdown, .menu-dropdown, .pen-style-panel, .recording-menu');
+		const isPickerClick = target.closest('.color-picker, .stroke-picker, .lang-btn, .hamburger-btn, .pen-style-btn, .record-toolbar-btn');
 		if (isDropdownClick || isPickerClick) return;
 
 		refs.colorDropdown.classList.remove('show');
@@ -82,6 +85,7 @@ export function setupToolbarListeners() {
 		const langDropdown = document.getElementById('langDropdown');
 		if (langDropdown) langDropdown.classList.remove('show');
 		if (refs.menuDropdown) refs.menuDropdown.classList.remove('show');
+		document.getElementById('penStylePanelMobile')?.classList.remove('show');
 	});
 
 	// Import, Clear, Copy, Save
@@ -98,8 +102,17 @@ export function setupToolbarListeners() {
 
 	// Hamburger menu
 	if (refs.menuBtn && refs.menuDropdown) {
+		const syncMenuLanguage = () => {
+			const value = document.getElementById('menuLanguageValue');
+			if (value) value.textContent = getCurrentLang() === 'en' ? '中文' : 'English';
+		};
+		syncMenuLanguage();
 		refs.menuBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
+			closeShapePaletteWithUI();
+			document.getElementById('recordingMenu')?.classList.remove('show');
+			document.getElementById('penStylePanelMobile')?.classList.remove('show');
+			syncMenuLanguage();
 			refs.menuDropdown.classList.toggle('show');
 			refs.colorDropdown.classList.remove('show');
 			refs.strokeDropdown.classList.remove('show');
@@ -114,11 +127,11 @@ export function setupToolbarListeners() {
 					case 'clear': clearCanvas(); break;
 					case 'copy': copyToClipboard(); break;
 					case 'save': saveImage(); break;
-					case 'lang-en':
-					case 'lang-zh': {
-						const lang = action === 'lang-en' ? 'en' : 'zh';
+					case 'language-toggle': {
+						const lang = getCurrentLang() === 'en' ? 'zh' : 'en';
 						setLanguage(lang);
 						applyTranslations();
+						syncMenuLanguage();
 						document.querySelectorAll('.lang-option').forEach(b => {
 							b.classList.toggle('active', b.dataset.lang === lang);
 						});
@@ -153,6 +166,45 @@ function setupMobileToolbar() {
 	if (refs.undoBtnMobile) refs.undoBtnMobile.addEventListener('click', undo);
 	if (refs.redoBtnMobile) refs.redoBtnMobile.addEventListener('click', redo);
 	if (refs.penBtnMobile) refs.penBtnMobile.addEventListener('click', () => setTool(TOOLS.PEN));
+
+	const penStyleBtn = document.getElementById('penStyleBtnMobile');
+	const penStylePanel = document.getElementById('penStylePanelMobile');
+	const syncPenStylePanel = () => {
+		if (!penStylePanel) return;
+		const color = getCurrentColor();
+		const width = getCurrentStrokeWidth();
+		const dash = getCurrentDash();
+		penStylePanel.querySelectorAll('.pen-panel-color').forEach(btn => btn.classList.toggle('active', btn.dataset.color === color));
+		penStylePanel.querySelectorAll('.pen-panel-width').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.width) === width));
+		penStylePanel.querySelectorAll('.pen-panel-dash').forEach(btn => btn.classList.toggle('active', (btn.dataset.dash === 'true') === dash));
+		const indicator = penStyleBtn?.querySelector('.pen-style-color');
+		if (indicator) indicator.style.background = color;
+		const line = penStyleBtn?.querySelector('.pen-style-line');
+		if (line) {
+			line.style.height = Math.max(2, Math.min(6, width * 0.75)) + 'px';
+			line.classList.toggle('dashed', dash);
+		}
+	};
+	if (penStyleBtn && penStylePanel) {
+		penStyleBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			closeShapePaletteWithUI();
+			document.getElementById('recordingMenu')?.classList.remove('show');
+			setTool(TOOLS.PEN);
+			syncPenStylePanel();
+			penStylePanel.classList.toggle('show');
+		});
+		penStylePanel.querySelectorAll('.pen-panel-color').forEach(btn => btn.addEventListener('click', () => {
+			setColor(btn.dataset.color); syncPenStylePanel();
+		}));
+		penStylePanel.querySelectorAll('.pen-panel-width').forEach(btn => btn.addEventListener('click', () => {
+			setStrokeWidth(Number(btn.dataset.width)); syncPenStylePanel();
+		}));
+		penStylePanel.querySelectorAll('.pen-panel-dash').forEach(btn => btn.addEventListener('click', () => {
+			setDash(btn.dataset.dash === 'true'); syncPenStylePanel();
+		}));
+		syncPenStylePanel();
+	}
 	if (refs.eraserBtnMobile) refs.eraserBtnMobile.addEventListener('click', () => setTool(TOOLS.ERASER));
 	if (refs.selectBtnMobile) refs.selectBtnMobile.addEventListener('click', () => setTool(TOOLS.SELECT));
 

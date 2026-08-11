@@ -226,8 +226,11 @@ export function toggleShapePalette() {
 	}
 	// The shape picker and selection properties are mutually exclusive panels,
 	// especially on small iOS screens where the picker is a bottom sheet.
-	if (isOpen) hidePropertyPanel();
-	else updatePropertyPanel();
+	if (isOpen) {
+		hidePropertyPanel();
+		document.getElementById('recordingMenu')?.classList.remove('show');
+		document.getElementById('penStylePanelMobile')?.classList.remove('show');
+	} else updatePropertyPanel();
 }
 
 /**

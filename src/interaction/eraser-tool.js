@@ -34,15 +34,6 @@ function renderLoopTick() {
 	});
 }
 
-// ============ Deferred heavy work ============
-function deferWork(fn) {
-	if (typeof requestIdleCallback === 'function') {
-		requestIdleCallback(() => fn(), { timeout: 100 });
-	} else {
-		setTimeout(fn, 0);
-	}
-}
-
 // ============ Erase logic ============
 
 function eraseAtPoint(pos) {
@@ -108,7 +99,7 @@ export function onEraserPointerUp() {
 	setIsDrawing(false);
 	stopRenderLoop();
 	redrawCanvas();
-	deferWork(() => saveToHistory());
+	saveToHistory();
 }
 
 export function onEraserCancel() {

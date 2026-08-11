@@ -39,6 +39,23 @@ test.describe('Input Architecture', () => {
 		}
 	});
 
+	test('native pointer events never leak into cloneable stroke history', async ({ page }) => {
+		const pageErrors = [];
+		page.on('pageerror', error => pageErrors.push(error.message));
+		await drawStroke(page, 120, 180, 220, 230, 6);
+		const result = await page.evaluate(async () => {
+			const state = await import('/src/core/state.js');
+			const stroke = state.getStrokes().at(-1);
+			return {
+				pointKeys: Object.keys(stroke?.points[0] || {}),
+				historyLength: state.getHistoryStack().length
+			};
+		});
+		expect(pageErrors).toEqual([]);
+		expect(result.pointKeys).toEqual(['x', 'y', 'pressure']);
+		expect(result.historyLength).toBeGreaterThan(1);
+	});
+
 	test('a pen tap selects existing ink while a drag still draws over it', async ({ page }) => {
 		const result = await page.evaluate(async () => {
 			const state = await import('/src/core/state.js');

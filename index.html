@@ -51,6 +51,10 @@
             <path d="M2 2l7.586 7.586"/>
           </svg>
         </button>
+        <button id="penStyleBtnMobile" class="toolbar-btn pen-style-btn" data-i18n-title="penStyleTitle" title="Pen Style">
+          <span class="pen-style-color" style="background:#000000"></span>
+          <span class="pen-style-line"></span>
+        </button>
         <button id="eraserBtnMobile" class="toolbar-btn" data-i18n-title="eraserTitle" title="Eraser">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20 20H9L4 15a1 1 0 0 1 0-1.4l9.6-9.6a1 1 0 0 1 1.4 0l6.6 6.6a1 1 0 0 1 0 1.4L16 18"/>
@@ -106,6 +110,9 @@
             <polygon points="4,20 12,4 20,20"/>
             <circle cx="17" cy="8" r="5"/>
           </svg>
+        </button>
+        <button id="recordBtnMobile" class="toolbar-btn record-toolbar-btn" data-i18n-title="recordLesson" title="Record Lesson">
+          <span class="record-dot"></span><span class="record-time"></span>
         </button>
       </div>
     </div>
@@ -189,6 +196,9 @@
     </div>
 
     <div class="toolbar-right">
+      <button id="recordBtn" class="toolbar-btn record-toolbar-btn desktop-only" data-i18n-title="recordLesson" title="Record Lesson">
+        <span class="record-dot"></span><span class="record-time"></span>
+      </button>
       <!-- Desktop-only action buttons -->
       <button id="importBtn" class="toolbar-btn desktop-only" data-i18n-title="importTitle" title="Import Image">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -272,20 +282,13 @@
             <span data-i18n="saveImage">Save Image</span>
           </button>
           <div class="menu-divider"></div>
-          <div class="menu-divider"></div>
-          <button class="menu-option" data-action="lang-en">
+          <button class="menu-option" data-action="language-toggle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
             </svg>
-            <span>English</span>
-          </button>
-          <button class="menu-option" data-action="lang-zh">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-            </svg>
-            <span>中文</span>
+            <span data-i18n="languageTitle">Language</span>
+            <span id="menuLanguageValue" class="menu-option-value">中文</span>
           </button>
         </div>
       </div>
@@ -343,6 +346,8 @@
     <canvas id="drawingCanvas"></canvas>
     <!-- Live canvas (active stroke, selection overlays — receives pointer events) -->
     <canvas id="liveCanvas"></canvas>
+    <video id="recordingFacePreview" class="recording-face-preview" autoplay muted playsinline hidden></video>
+    <canvas id="recordingOutputCanvas" hidden></canvas>
     <!-- Drop zone overlay -->
     <div class="drop-zone" id="dropZone">
       <div class="drop-zone-content">
@@ -396,6 +401,74 @@
       </svg>
     </button>
   </div>
+
+  <!-- Mobile pen settings consolidated behind one toolbar button -->
+  <div class="pen-style-panel" id="penStylePanelMobile">
+    <div class="pen-style-colors">
+      <button class="pen-panel-color active" data-color="#000000" style="background:#000000" aria-label="Black"></button>
+      <button class="pen-panel-color" data-color="#2563eb" style="background:#2563eb" aria-label="Blue"></button>
+      <button class="pen-panel-color" data-color="#dc2626" style="background:#dc2626" aria-label="Red"></button>
+      <button class="pen-panel-color" data-color="#16a34a" style="background:#16a34a" aria-label="Green"></button>
+      <button class="pen-panel-color" data-color="#9333ea" style="background:#9333ea" aria-label="Purple"></button>
+      <button class="pen-panel-color" data-color="#ea580c" style="background:#ea580c" aria-label="Orange"></button>
+    </div>
+    <div class="pen-style-options">
+      <button class="pen-panel-width" data-width="2" data-i18n-title="strokeThin" title="Thin" aria-label="Thin">
+        <svg viewBox="0 0 30 16"><line x1="3" y1="8" x2="27" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="pen-panel-width active" data-width="4" data-i18n-title="strokeMedium" title="Medium" aria-label="Medium">
+        <svg viewBox="0 0 30 16"><line x1="3" y1="8" x2="27" y2="8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+      </button>
+      <button class="pen-panel-width" data-width="8" data-i18n-title="strokeThick" title="Thick" aria-label="Thick">
+        <svg viewBox="0 0 30 16"><line x1="3" y1="8" x2="27" y2="8" stroke="currentColor" stroke-width="8" stroke-linecap="round"/></svg>
+      </button>
+      <button class="pen-panel-dash" data-dash="false" data-i18n-title="strokeSolid" title="Solid" aria-label="Solid">
+        <svg viewBox="0 0 30 16"><line x1="3" y1="8" x2="27" y2="8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+      </button>
+      <button class="pen-panel-dash" data-dash="true" data-i18n-title="strokeDashed" title="Dashed" aria-label="Dashed">
+        <svg viewBox="0 0 30 16"><line x1="3" y1="8" x2="27" y2="8" stroke="currentColor" stroke-width="3" stroke-dasharray="5 6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Recording menu: popover on desktop, bottom sheet on mobile -->
+  <section class="recording-menu" id="recordingMenu" aria-label="Record lesson">
+    <div class="recording-menu-header">
+      <strong data-i18n="recordLesson">Record lesson</strong>
+      <span id="recordingMenuTimer"></span>
+    </div>
+    <label class="recording-setting"><span data-i18n="recordMicrophone">Microphone</span><input id="recordMicToggle" type="checkbox" checked></label>
+    <label class="recording-setting"><span data-i18n="recordFaceCamera">Face camera</span><input id="recordFaceToggle" type="checkbox"></label>
+    <div id="recordFaceSettings" class="recording-face-settings" hidden>
+      <label class="recording-preview-toggle">
+        <span data-i18n="recordLivePreview">Live preview</span>
+        <input id="recordLivePreviewToggle" type="checkbox" checked>
+      </label>
+      <div class="recording-face-control-row">
+        <div class="recording-face-control-group recording-position-group">
+          <span class="recording-setting-label" data-i18n="recordPosition">Position</span>
+          <div class="recording-corners" role="group" aria-label="Face position">
+            <button data-corner="top-left">↖</button><button data-corner="top-right">↗</button>
+            <button data-corner="bottom-left">↙</button><button class="active" data-corner="bottom-right">↘</button>
+          </div>
+        </div>
+        <div class="recording-face-control-group">
+          <span class="recording-setting-label" data-i18n="recordFaceSize">Face size</span>
+          <div class="recording-sizes" role="group" aria-label="Face size">
+            <button data-size="small">S</button><button class="active" data-size="medium">M</button><button data-size="large">L</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button id="recordStartBtn" class="recording-primary" data-i18n="recordStart">Start recording</button>
+    <div id="recordActiveControls" class="recording-active-controls" hidden>
+      <button id="recordPauseBtn" class="recording-pause" data-i18n="recordPause">Pause</button>
+      <button id="recordStopBtn" class="recording-stop" data-i18n="recordStop">Stop and save</button>
+      <button id="recordDiscardBtn" class="recording-discard" data-i18n="recordDiscard">Discard recording</button>
+    </div>
+    <a id="recordDownloadLink" class="recording-download" data-i18n="recordDownload" hidden>Download video</a>
+    <p id="recordingStatus" class="recording-status"></p>
+  </section>
 
   <!-- Conversion Popup (appears after freehand stroke) -->
   <div class="conversion-popup" id="conversionPopup"></div>

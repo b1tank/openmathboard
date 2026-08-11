@@ -45,15 +45,6 @@ function renderLoopTick() {
 	});
 }
 
-// ============ Deferred heavy work ============
-function deferWork(fn) {
-	if (typeof requestIdleCallback === 'function') {
-		requestIdleCallback(() => fn(), { timeout: 100 });
-	} else {
-		setTimeout(fn, 0);
-	}
-}
-
 // ============ Select tool handlers ============
 
 export function onSelectPointerDown(pos) {
@@ -176,7 +167,8 @@ export function onSelectPointerUp(pos) {
 		setIsDraggingAnchor(false);
 		setDraggingAnchorInfo(null);
 		stopRenderLoop();
-		deferWork(() => { saveToHistory(); redrawCanvas(); });
+		saveToHistory();
+		redrawCanvas();
 		updatePropertyPanel();
 		return;
 	}
@@ -186,7 +178,8 @@ export function onSelectPointerUp(pos) {
 		setDragStartPos(null);
 		stopRenderLoop();
 		if (getSelectedStrokes().length > 0) {
-			deferWork(() => { saveToHistory(); redrawCanvas(); });
+			saveToHistory();
+			redrawCanvas();
 		}
 		updatePropertyPanel();
 		return;

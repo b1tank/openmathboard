@@ -34,6 +34,7 @@ import { setupWheelZoom, setupPinchZoom, setupSpacebarPan } from './canvas/camer
 import { initPropertyPanel } from './ui/property-panel.js';
 import { initConversionPopup } from './ui/conversion.js';
 import { initShapePalette } from './ui/palette.js';
+import { initRecording } from './ui/recording.js';
 import { loadState, scheduleSave } from './core/persistence.js';
 
 // ============ Initialize i18n ============
@@ -120,6 +121,7 @@ function init() {
 	// Conversion popup + shape palette
 	initConversionPopup();
 	initShapePalette();
+	initRecording();
 
 	// i18n
 	setupLanguagePicker({

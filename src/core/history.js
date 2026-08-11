@@ -16,15 +16,26 @@ export function saveToHistory() {
 	// Remove any redo states
 	const trimmed = stack.slice(0, idx + 1);
 
-	// Save current state
-	trimmed.push({
-		strokes: structuredClone(getStrokes()),
-	});
+	// Ignore no-op commits. Duplicate snapshots made Undo appear broken because
+	// the first undo restored geometry identical to what was already visible.
+	// Geometry is JSON data. Explicitly strip any legacy/transient native event
+	// references so one bad point cannot break every subsequent Undo snapshot.
+	const snapshot = JSON.parse(JSON.stringify(getStrokes(), (key, value) =>
+		key === 'rawEvent' ? undefined : value
+	));
+	const current = trimmed[trimmed.length - 1]?.strokes;
+	if (current && JSON.stringify(current) === JSON.stringify(snapshot)) {
+		updateHistoryButtons();
+		return false;
+	}
+
+	trimmed.push({ strokes: snapshot });
 
 	setHistoryStack(trimmed);
 	setHistoryIndex(trimmed.length - 1);
 	updateHistoryButtons();
 	scheduleSave();
+	return true;
 }
 
 export function undo() {

@@ -69,6 +69,12 @@ function getMinSpacing() {
 
 // ============ Pen tool handlers ============
 
+function strokePoint(pos) {
+	// Normalized input also carries the native PointerEvent for routing. DOM
+	// events are not cloneable and must never enter persisted/history geometry.
+	return { x: pos.x, y: pos.y, pressure: pos.pressure };
+}
+
 function beginStroke(pos) {
 	hideHeroSection();
 	perfReset();
@@ -77,7 +83,7 @@ function beginStroke(pos) {
 		color: getCurrentColor(),
 		width: getCurrentStrokeWidth(),
 		dash: getCurrentDash(),
-		points: [pos]
+		points: [strokePoint(pos)]
 	});
 	startRenderLoop();
 }
@@ -112,7 +118,7 @@ export function onPenPointerMove(pos) {
 	const lastPt = stroke.points[stroke.points.length - 1];
 	const minSpacing = getMinSpacing();
 	if (!lastPt || worldDistance(lastPt, pos) >= minSpacing) {
-		stroke.points.push(pos);
+		stroke.points.push(strokePoint(pos));
 		perfSampleCommitted();
 	}
 }
@@ -142,7 +148,7 @@ export function onPenPointerUp(pos) {
 			const lastPt = currentStroke.points[currentStroke.points.length - 1];
 			const minSpacing = getMinSpacing();
 			if (!lastPt || worldDistance(lastPt, pos) >= minSpacing) {
-				currentStroke.points.push(pos);
+				currentStroke.points.push(strokePoint(pos));
 			}
 		}
 
@@ -157,14 +163,16 @@ export function onPenPointerUp(pos) {
 		const screenY = (lastPt.y - camera.y) * camera.zoom +
 			(parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-height')) || 56);
 
-		// Clear in-progress stroke and redraw scene
+		// Commit history before returning control to the user. Deferring this let
+		// an immediate Undo run before the stroke snapshot existed, then the late
+		// snapshot incorrectly destroyed the Redo branch.
 		setCurrentStroke(null);
+		saveToHistory();
 		redrawScene();
 		redrawLive();
 
-		// Defer heavy work
+		// Defer shape detection and diagnostics only.
 		deferWork(() => {
-			saveToHistory();
 			showConversionPopup(currentStroke, screenX, screenY);
 			perfLogSummary();
 		});
