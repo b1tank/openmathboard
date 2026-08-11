@@ -8,10 +8,16 @@ import { hidePropertyPanel, updatePropertyPanel } from './property-panel.js';
 import { t } from '../i18n/i18n.js';
 import { makeBottomSheetDismissible } from './bottom-sheet.js';
 
-const MIME_CANDIDATES = [
+const MIME_CANDIDATES_WITH_AUDIO = [
 	'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
 	'video/mp4',
 	'video/webm;codecs=vp8,opus',
+	'video/webm'
+];
+const MIME_CANDIDATES_VIDEO_ONLY = [
+	'video/mp4;codecs=avc1.42E01E',
+	'video/mp4',
+	'video/webm;codecs=vp8',
 	'video/webm'
 ];
 const FACE_SIZES = { small: 0.18, medium: 0.25, large: 0.32 };
@@ -102,7 +108,8 @@ async function startCameraPreview() {
 	if (cameraPreviewStream?.getVideoTracks().some(track => track.readyState === 'live')) return cameraPreviewStream;
 	if (cameraRequest) return cameraRequest;
 	cameraRequest = (async () => {
-		const stream = await navigator.mediaDevices.getUserMedia({
+		const getUserMedia = window.__OMB_GET_USER_MEDIA || navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+		const stream = await getUserMedia({
 			audio: false,
 			video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
 		});
@@ -187,7 +194,10 @@ function updateTimer() {
 }
 
 function chooseRecorder(stream) {
-	for (const mimeType of MIME_CANDIDATES) {
+	const candidates = stream.getAudioTracks().length
+		? MIME_CANDIDATES_WITH_AUDIO
+		: MIME_CANDIDATES_VIDEO_ONLY;
+	for (const mimeType of candidates) {
 		if (!MediaRecorder.isTypeSupported(mimeType)) continue;
 		try {
 			return new MediaRecorder(stream, {
@@ -308,7 +318,8 @@ async function requestMedia() {
 	}
 	if (micToggle.checked) {
 		try {
-			const mic = await navigator.mediaDevices.getUserMedia({
+			const getUserMedia = window.__OMB_GET_USER_MEDIA || navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+			const mic = await getUserMedia({
 				audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false
 			});
 			tracks.push(...mic.getAudioTracks());

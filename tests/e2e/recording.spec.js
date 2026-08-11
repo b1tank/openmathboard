@@ -4,20 +4,17 @@ import { waitForCanvas } from './helpers.js';
 test.describe('Course recording', () => {
 	test('mobile toolbar consolidates pen styles and exposes recording settings', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.addInitScript(() => {
-			Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-				configurable: true,
-				value: async constraints => {
-					if (!constraints.video) return new MediaStream();
-					const canvas = document.createElement('canvas');
-					canvas.width = 640; canvas.height = 480;
-					canvas.getContext('2d').fillRect(0, 0, 640, 480);
-					return canvas.captureStream(5);
-				}
-			});
-		});
 		await page.goto('/');
 		await waitForCanvas(page);
+		await page.evaluate(() => {
+			window.__OMB_GET_USER_MEDIA = async constraints => {
+				if (!constraints.video) return new MediaStream();
+				const canvas = document.createElement('canvas');
+				canvas.width = 640; canvas.height = 480;
+				canvas.getContext('2d').fillRect(0, 0, 640, 480);
+				return canvas.captureStream(5);
+			};
+		});
 
 		await expect(page.locator('#penStyleBtnMobile')).toBeVisible();
 		await expect(page.locator('#colorBtnMobile')).toBeHidden();
