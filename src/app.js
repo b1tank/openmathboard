@@ -35,6 +35,7 @@ import { initPropertyPanel } from './ui/property-panel.js';
 import { initConversionPopup } from './ui/conversion.js';
 import { initShapePalette } from './ui/palette.js';
 import { initRecording } from './ui/recording.js';
+import { initSaveStatus } from './ui/save-status.js';
 import { loadState, setupPersistenceLifecycle } from './core/persistence.js';
 
 // ============ Initialize i18n ============
@@ -122,6 +123,7 @@ function init() {
 	initConversionPopup();
 	initShapePalette();
 	initRecording();
+	initSaveStatus();
 
 	// i18n
 	setupLanguagePicker({

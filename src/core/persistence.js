@@ -7,12 +7,27 @@ const DEBOUNCE_MS = 2000;
 let saveTimer = null;
 let dirty = false;
 let lifecycleSetup = false;
+let saveStatus = 'saved';
+const statusListeners = new Set();
+
+function setSaveStatus(status) {
+	if (saveStatus === status) return;
+	saveStatus = status;
+	for (const listener of statusListeners) listener(status);
+}
+
+export function subscribeSaveStatus(listener) {
+	statusListeners.add(listener);
+	listener(saveStatus);
+	return () => statusListeners.delete(listener);
+}
 
 /**
  * Save current canvas state to localStorage (debounced)
  */
 export function scheduleSave() {
 	dirty = true;
+	setSaveStatus('saving');
 	clearTimeout(saveTimer);
 	saveTimer = setTimeout(() => {
 		saveTimer = null;
@@ -30,9 +45,11 @@ function saveState() {
 		};
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 		dirty = false;
+		setSaveStatus('saved');
 		return true;
 	} catch {
 		// Preserve dirty state so a later lifecycle flush can retry.
+		setSaveStatus('error');
 		return false;
 	}
 }
