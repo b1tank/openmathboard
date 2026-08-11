@@ -9,6 +9,21 @@ import {
 import { redrawCanvas } from '../canvas/renderer.js';
 import { scheduleSave } from './persistence.js';
 
+export const HISTORY_MAX_ENTRIES = 100;
+export const HISTORY_MAX_BYTES = 16 * 1024 * 1024;
+
+function entryBytes(entry) {
+	return entry.bytes || JSON.stringify(entry.strokes).length * 2;
+}
+
+function enforceHistoryBudget(entries) {
+	let bytes = entries.reduce((total, entry) => total + entryBytes(entry), 0);
+	while (entries.length > 1 && (entries.length > HISTORY_MAX_ENTRIES || bytes > HISTORY_MAX_BYTES)) {
+		bytes -= entryBytes(entries.shift());
+	}
+	return entries;
+}
+
 export function saveToHistory() {
 	const stack = getHistoryStack();
 	const idx = getHistoryIndex();
@@ -20,19 +35,21 @@ export function saveToHistory() {
 	// the first undo restored geometry identical to what was already visible.
 	// Geometry is JSON data. Explicitly strip any legacy/transient native event
 	// references so one bad point cannot break every subsequent Undo snapshot.
-	const snapshot = JSON.parse(JSON.stringify(getStrokes(), (key, value) =>
+	const serialized = JSON.stringify(getStrokes(), (key, value) =>
 		key === 'rawEvent' ? undefined : value
-	));
+	);
+	const snapshot = JSON.parse(serialized);
 	const current = trimmed[trimmed.length - 1]?.strokes;
-	if (current && JSON.stringify(current) === JSON.stringify(snapshot)) {
+	if (current && JSON.stringify(current) === serialized) {
 		updateHistoryButtons();
 		return false;
 	}
 
-	trimmed.push({ strokes: snapshot });
+	trimmed.push({ strokes: snapshot, bytes: serialized.length * 2 });
+	const bounded = enforceHistoryBudget(trimmed);
 
-	setHistoryStack(trimmed);
-	setHistoryIndex(trimmed.length - 1);
+	setHistoryStack(bounded);
+	setHistoryIndex(bounded.length - 1);
 	updateHistoryButtons();
 	scheduleSave();
 	return true;
