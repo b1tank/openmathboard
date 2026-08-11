@@ -1,33 +1,30 @@
-# Sprint Plan — Architecture Sprints 2+3: Tool Separation + Hardening
+# Sprint Plan — Production Readiness Sprint 0
 
 ## Objective
-Complete the architecture rebuild: extract eraser/select into tool modules, remove legacy bridge, unify gesture handling, add instrumentation, and ensure all tests pass.
 
-## Scope
-- Sprint 2: eraser-tool.js, select-tool.js, input-manager update, input.js slim-down, camera.js gesture unification
-- Sprint 3: perf instrumentation, pointercancel tests, test helper fix for two-canvas
+Harden the release pipeline and local data lifecycle before larger scene-model and cloud work. This sprint executes the low-hanging safety backlog from `plan.md` with AI-assisted delivery and atomic commits.
 
-## Task List
+## Prioritized Task List
 
-### Sprint 2 — Tool Separation
+- [ ] **PR-001 — Dependency security:** Upgrade Vite and vulnerable transitive dependencies; regenerate lockfile; verify audit/build/tests.
+- [ ] **PR-002 — CI validation gate:** Add a required validation job using clean install, build, Chromium Playwright tests, and production dependency audit before deployment.
+- [ ] **PR-003 — Post-deploy smoke:** Verify the deployed health endpoint and app shell; fail deployment on smoke failure and record the deployed revision.
+- [ ] **PR-004 — Browser matrix:** Add Chromium, Firefox, and WebKit Playwright projects and make the suite browser-aware.
+- [ ] **PR-005 — Real iPad release checklist:** Document repeatable Apple Pencil, lifecycle, camera, recording, orientation, and download checks.
+- [ ] **PR-006 — Lifecycle persistence:** Flush pending local saves on `visibilitychange` and `pagehide`.
+- [ ] **PR-007 — Save status:** Add Saved / Saving / Error status tied to actual localStorage durability.
+- [ ] **PR-008 — Bounded history:** Cap undo history by count and approximate serialized memory; preserve the current branch and UI correctness.
+- [ ] **PR-009 — Frontend telemetry:** Add privacy-safe client error, rejection, save-failure, and release metadata telemetry without recording board content.
+- [x] **PR-010 — Documentation truthfulness:** Implemented/planned status and active roadmap were corrected in commit `1b7939a`.
+- [ ] **Final build and full browser test matrix**
+- [ ] **Push all atomic commits**
 
-- [x] T1: Create eraser-tool.js
-- [x] T2: Create select-tool.js
-- [x] T3: Update input-manager to route eraser/select directly (remove legacy bridge)
-- [x] T4: Slim input.js to keyboard shortcuts only
-- [x] T5: Remove legacy bridge imports from app.js
-- [x] T6: Unify gestures — remove touch listeners from camera.js, add pinch to input-manager
+## Merge Decisions
 
-### Sprint 3 — Hardening & Instrumentation
-
-- [x] T7: Add perf instrumentation module
-- [x] T8: Add pointercancel Playwright test
-- [x] T9: Fix test helper for two-canvas (query #drawingCanvas specifically)
-- [x] T10: Build check + run tests
-- [x] T11: Update sprint plan + push
+- PR-002 creates the validation job; PR-004 extends it to the full browser matrix in a separate commit.
+- PR-006 implements lifecycle durability; PR-007 adds user-visible status in a separate commit because it changes UI and i18n.
+- PR-009 is limited to a local telemetry abstraction plus Application Insights-compatible endpoint configuration; no board content, stroke data, camera, microphone, or recording blobs may be emitted.
 
 ## Hiccups & Notes
-- Synthetic pointercancel does not work with setPointerCapture in Playwright headless. Converted to handler-wiring verification test. Full behavioral test of cancel needs real iPad.
-- input.js reduced from 516 to 72 lines.
-- Build: 42 modules, 266ms. Tests: 4/4 pass.
-- Pinch zoom moved from raw touch listeners to pointer-based detection in input-manager.
+
+- None yet.
