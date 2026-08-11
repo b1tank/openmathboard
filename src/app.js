@@ -35,7 +35,7 @@ import { initPropertyPanel } from './ui/property-panel.js';
 import { initConversionPopup } from './ui/conversion.js';
 import { initShapePalette } from './ui/palette.js';
 import { initRecording } from './ui/recording.js';
-import { loadState, scheduleSave } from './core/persistence.js';
+import { loadState, setupPersistenceLifecycle } from './core/persistence.js';
 
 // ============ Initialize i18n ============
 initI18n({
@@ -140,6 +140,7 @@ function init() {
 
 	// Load saved state, then save initial history
 	loadState();
+	setupPersistenceLifecycle();
 	if (getStrokes().length > 0) {
 		hideHeroSection();
 	}
