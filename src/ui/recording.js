@@ -47,12 +47,18 @@ let resultUrl = null;
 let facePosition = { ...FACE_CORNERS['bottom-right'] };
 let faceCorner = 'bottom-right';
 let faceSize = 'medium';
+let faceAspect = matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape';
+let faceAspectManual = false;
 let draggingFace = false;
 let faceDragOffset = { x: 0, y: 0 };
 
 function elements() {
 	return {
 		buttons: [document.getElementById('recordBtn'), document.getElementById('recordBtnMobile')].filter(Boolean),
+		toolbarStopButtons: [
+			document.getElementById('recordStopToolbarBtn'),
+			document.getElementById('recordStopToolbarBtnMobile')
+		].filter(Boolean),
 		menuTimer: document.getElementById('recordingMenuTimer'),
 		micToggle: document.getElementById('recordMicToggle'),
 		faceToggle: document.getElementById('recordFaceToggle'),
@@ -63,6 +69,9 @@ function elements() {
 		pauseBtn: document.getElementById('recordPauseBtn'),
 		stopBtn: document.getElementById('recordStopBtn'),
 		discardBtn: document.getElementById('recordDiscardBtn'),
+		result: document.getElementById('recordResult'),
+		resultPreview: document.getElementById('recordResultPreview'),
+		resultDiscardBtn: document.getElementById('recordResultDiscardBtn'),
 		download: document.getElementById('recordDownloadLink'),
 		status: document.getElementById('recordingStatus')
 	};
@@ -96,6 +105,8 @@ function updateFaceSettings() {
 	facePreview.style.width = `${FACE_SIZES[faceSize] * 100}%`;
 	menu.querySelectorAll('[data-corner]').forEach(btn => btn.classList.toggle('active', btn.dataset.corner === faceCorner));
 	menu.querySelectorAll('[data-size]').forEach(btn => btn.classList.toggle('active', btn.dataset.size === faceSize));
+	menu.querySelectorAll('[data-aspect]').forEach(btn => btn.classList.toggle('active', btn.dataset.aspect === faceAspect));
+	facePreview.classList.toggle('face-landscape', faceAspect === 'landscape');
 	updateLivePreview();
 	applyFacePreviewPosition();
 }
@@ -110,9 +121,15 @@ async function startCameraPreview() {
 	if (cameraRequest) return cameraRequest;
 	cameraRequest = (async () => {
 		const getUserMedia = window.__OMB_GET_USER_MEDIA || navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+		const portrait = faceAspect === 'portrait';
 		const stream = await getUserMedia({
 			audio: false,
-			video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+			video: {
+				facingMode: 'user',
+				width: { ideal: portrait ? 480 : 640 },
+				height: { ideal: portrait ? 640 : 480 },
+				aspectRatio: { ideal: portrait ? 3 / 4 : 4 / 3 }
+			}
 		});
 		if (!stream.getVideoTracks().length) throw new Error(t('recordCameraUnavailable'));
 		cameraPreviewStream = stream;
@@ -170,8 +187,13 @@ async function handleFaceToggle() {
 }
 
 function setRecordingUi(recording) {
-	const { buttons, micToggle, faceToggle, startBtn, activeControls, download } = elements();
+	const {
+		buttons, toolbarStopButtons, micToggle, faceToggle,
+		startBtn, activeControls, result
+	} = elements();
 	buttons.forEach(button => button.classList.toggle('recording', recording));
+	document.body.classList.toggle('recording-active', recording);
+	toolbarStopButtons.forEach(button => { button.hidden = !recording; });
 	// An acquired microphone can be muted/unmuted during recording. If the
 	// session started without one, enabling it would require a new permission
 	// flow and cannot be added to the active MediaRecorder stream safely.
@@ -179,7 +201,7 @@ function setRecordingUi(recording) {
 	faceToggle.disabled = recording;
 	startBtn.hidden = recording;
 	activeControls.hidden = !recording;
-	if (recording) download.hidden = true;
+	if (recording) result.hidden = true;
 }
 
 function updateTimer() {
@@ -251,8 +273,9 @@ function drawImportedImages(scaleX, scaleY) {
 
 function drawFace() {
 	if (facePreview.hidden || facePreview.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
-	const width = Math.round(outputCanvas.width * FACE_SIZES[faceSize]);
-	const height = Math.round(width * 3 / 4);
+	const baseWidth = Math.round(outputCanvas.width * FACE_SIZES[faceSize]);
+	const width = faceAspect === 'portrait' ? Math.round(baseWidth * 0.75) : baseWidth;
+	const height = faceAspect === 'portrait' ? Math.round(width * 4 / 3) : Math.round(width * 3 / 4);
 	const margin = Math.round(outputCanvas.width * 0.018);
 	const x = margin + facePosition.x * (outputCanvas.width - width - margin * 2);
 	const y = margin + facePosition.y * (outputCanvas.height - height - margin * 2);
@@ -413,6 +436,21 @@ function discardRecording() {
 	recorder.stop();
 }
 
+function discardResult() {
+	if (!resultUrl || !confirm(t('recordDiscardConfirm'))) return;
+	const { result, resultPreview, download, startBtn } = elements();
+	resultPreview.pause();
+	resultPreview.removeAttribute('src');
+	resultPreview.load();
+	URL.revokeObjectURL(resultUrl);
+	resultUrl = null;
+	download.removeAttribute('href');
+	result.hidden = true;
+	startBtn.hidden = false;
+	setStatus(t('recordDiscarded'));
+	menu.classList.remove('show');
+}
+
 function releaseMedia() {
 	if (compositorFrame !== null) cancelAnimationFrame(compositorFrame);
 	compositorFrame = null;
@@ -433,7 +471,10 @@ function failRecording(error) {
 }
 
 function finishRecording() {
-	const { download, stopBtn, discardBtn, pauseBtn, buttons, menuTimer } = elements();
+	const {
+		download, result, resultPreview, stopBtn, discardBtn,
+		pauseBtn, buttons, menuTimer
+	} = elements();
 	if (discardRequested) {
 		releaseMedia();
 		setRecordingUi(false);
@@ -445,7 +486,7 @@ function finishRecording() {
 			button.querySelector('.record-time').textContent = '';
 		});
 		menuTimer.textContent = '';
-		download.hidden = !resultUrl;
+		result.hidden = !resultUrl;
 		setStatus(t('recordDiscarded'));
 		recorder = null; chunks = []; discardRequested = false;
 		menu.classList.remove('show');
@@ -458,8 +499,12 @@ function finishRecording() {
 	setRecordingUi(false);
 	if (resultUrl) URL.revokeObjectURL(resultUrl);
 	resultUrl = URL.createObjectURL(blob);
+	resultPreview.src = resultUrl;
+	resultPreview.currentTime = 0;
 	download.href = resultUrl;
+	elements().startBtn.hidden = true;
 	download.download = `openmathboard-${new Date().toISOString().replace(/[:.]/g, '-')}.${type.includes('mp4') ? 'mp4' : 'webm'}`;
+	result.hidden = false;
 	download.hidden = false;
 	stopBtn.disabled = false;
 	discardBtn.disabled = false;
@@ -539,8 +584,18 @@ export function initRecording() {
 		requestAnimationFrame(applyFacePreviewPosition);
 		if (!recorder) updatePropertyPanel();
 	});
-	const { buttons, faceToggle, livePreviewToggle, startBtn, pauseBtn, stopBtn, discardBtn } = elements();
-	buttons.forEach(button => button.addEventListener('click', event => { event.stopPropagation(); toggleMenu(); }));
+	const {
+		buttons, toolbarStopButtons, faceToggle, livePreviewToggle,
+		startBtn, pauseBtn, stopBtn, discardBtn, resultDiscardBtn
+	} = elements();
+	buttons.forEach(button => button.addEventListener('click', event => {
+		event.stopPropagation();
+		toggleMenu();
+	}));
+	toolbarStopButtons.forEach(button => button.addEventListener('click', event => {
+		event.stopPropagation();
+		stopRecording();
+	}));
 	faceToggle.addEventListener('change', handleFaceToggle);
 	livePreviewToggle.addEventListener('change', updateLivePreview);
 	elements().micToggle.addEventListener('change', event => {
@@ -553,15 +608,26 @@ export function initRecording() {
 	menu.querySelectorAll('[data-size]').forEach(button => button.addEventListener('click', () => {
 		faceSize = button.dataset.size; updateFaceSettings();
 	}));
+	menu.querySelectorAll('[data-aspect]').forEach(button => button.addEventListener('click', () => {
+		faceAspect = button.dataset.aspect;
+		faceAspectManual = true;
+		updateFaceSettings();
+	}));
 	startBtn.addEventListener('click', startRecording);
 	pauseBtn.addEventListener('click', togglePause);
 	stopBtn.addEventListener('click', stopRecording);
 	discardBtn.addEventListener('click', discardRecording);
+	resultDiscardBtn.addEventListener('click', discardResult);
 	facePreview.addEventListener('pointerdown', startFaceDrag);
 	facePreview.addEventListener('pointermove', moveFaceDrag);
 	facePreview.addEventListener('pointerup', stopFaceDrag);
 	facePreview.addEventListener('pointercancel', stopFaceDrag);
-	window.addEventListener('resize', applyFacePreviewPosition);
+	window.addEventListener('resize', () => {
+		if (!faceAspectManual) {
+			faceAspect = matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape';
+			updateFaceSettings();
+		} else applyFacePreviewPosition();
+	});
 	window.addEventListener('beforeunload', event => {
 		if (recorder && recorder.state !== 'inactive') {
 			event.preventDefault();

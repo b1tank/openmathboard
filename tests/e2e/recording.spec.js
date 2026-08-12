@@ -45,6 +45,12 @@ test.describe('Course recording', () => {
 			await page.locator('#recordFaceSettings').evaluate(settings => { settings.hidden = false; });
 		}
 		await expect(page.locator('#recordFaceSettings')).toBeVisible();
+		await expect(page.locator('[data-aspect="portrait"]')).toHaveClass(/active/);
+		await page.locator('[data-aspect="landscape"]').click();
+		await expect(page.locator('[data-aspect="landscape"]')).toHaveClass(/active/);
+		if (canExerciseSyntheticCamera) {
+			await expect(page.locator('#recordingFacePreview')).toHaveClass(/face-landscape/);
+		}
 		const groups = await page.locator('.recording-face-control-group').evaluateAll(elements =>
 			elements.map(element => element.getBoundingClientRect().top)
 		);
@@ -79,6 +85,14 @@ test.describe('Course recording', () => {
 		expect(languageAfter).not.toBe(languageBefore);
 	});
 
+	test('camera window defaults to the device orientation', async ({ page }) => {
+		await page.setViewportSize({ width: 844, height: 390 });
+		await page.goto('/');
+		await waitForCanvas(page);
+		await page.locator('#recordBtn').click();
+		await expect(page.locator('[data-aspect="landscape"]')).toHaveClass(/active/);
+	});
+
 	test('video-only recording produces a downloadable canvas video', async ({ page }) => {
 		await page.goto('/');
 		await waitForCanvas(page);
@@ -99,8 +113,11 @@ test.describe('Course recording', () => {
 		await expect(page.locator('#recordingMenu')).not.toHaveClass(/show/);
 		await page.waitForTimeout(500);
 
-		await page.locator('#recordBtn').click();
-		await page.locator('#recordStopBtn').click();
+		await expect(page.locator('#recordStopToolbarBtn')).toBeVisible();
+		await expect(page.locator('#recordStopToolbarBtnMobile')).not.toHaveAttribute('hidden');
+		await page.locator('#recordStopToolbarBtn').click();
+		await expect(page.locator('#recordResult')).toBeVisible();
+		await expect(page.locator('#recordResultPreview')).toBeVisible();
 		await expect(page.locator('#recordDownloadLink')).toBeVisible();
 
 		const result = await page.locator('#recordDownloadLink').evaluate(link => ({
@@ -109,6 +126,24 @@ test.describe('Course recording', () => {
 		}));
 		expect(result.href).toMatch(/^blob:/);
 		expect(result.download).toMatch(/\.(mp4|webm)$/);
+	});
+
+	test('stopped recording can be previewed then discarded', async ({ page }) => {
+		await page.goto('/');
+		await waitForCanvas(page);
+		test.skip(!await page.evaluate(() =>
+			typeof document.createElement('canvas').captureStream === 'function' && typeof MediaRecorder !== 'undefined'
+		), 'This Playwright browser build does not expose canvas recording');
+		await page.locator('#recordBtn').click();
+		await page.locator('#recordMicToggle').uncheck();
+		await page.locator('#recordStartBtn').click();
+		await page.waitForTimeout(300);
+		await page.locator('#recordStopToolbarBtn').click();
+		await expect(page.locator('#recordResultPreview')).toBeVisible();
+		page.once('dialog', dialog => dialog.accept());
+		await page.locator('#recordResultDiscardBtn').click();
+		await expect(page.locator('#recordResult')).toBeHidden();
+		await expect(page.locator('#recordingMenu')).not.toHaveClass(/show/);
 	});
 
 	test('discard asks for confirmation and produces no download', async ({ page }) => {

@@ -114,6 +114,9 @@
         <button id="recordBtnMobile" class="toolbar-btn record-toolbar-btn" data-i18n-title="recordLesson" title="Record Lesson">
           <span class="record-dot"></span><span class="record-time"></span>
         </button>
+        <button id="recordStopToolbarBtnMobile" class="toolbar-btn record-stop-toolbar-btn" data-i18n-title="recordStop" title="Stop and save" hidden>
+          <span></span>
+        </button>
       </div>
     </div>
 
@@ -202,6 +205,9 @@
       </div>
       <button id="recordBtn" class="toolbar-btn record-toolbar-btn desktop-only" data-i18n-title="recordLesson" title="Record Lesson">
         <span class="record-dot"></span><span class="record-time"></span>
+      </button>
+      <button id="recordStopToolbarBtn" class="toolbar-btn record-stop-toolbar-btn desktop-only" data-i18n-title="recordStop" title="Stop and save" hidden>
+        <span></span>
       </button>
       <!-- Desktop-only action buttons -->
       <button id="importBtn" class="toolbar-btn desktop-only" data-i18n-title="importTitle" title="Import Image">
@@ -450,10 +456,16 @@
     <label class="recording-setting"><span data-i18n="recordMicrophone">Microphone</span><input id="recordMicToggle" type="checkbox" checked></label>
     <label class="recording-setting"><span data-i18n="recordFaceCamera">Face camera</span><input id="recordFaceToggle" type="checkbox"></label>
     <div id="recordFaceSettings" class="recording-face-settings" hidden>
-      <label class="recording-preview-toggle">
-        <span data-i18n="recordLivePreview">Live preview</span>
-        <input id="recordLivePreviewToggle" type="checkbox" checked>
-      </label>
+      <div class="recording-face-toggles">
+        <label class="recording-preview-toggle">
+          <span data-i18n="recordLivePreview">Live preview</span>
+          <input id="recordLivePreviewToggle" type="checkbox" checked>
+        </label>
+        <div class="recording-aspect" role="group" aria-label="Camera window orientation">
+          <button data-aspect="portrait" data-i18n-title="recordPortrait" title="Portrait">▯</button>
+          <button data-aspect="landscape" data-i18n-title="recordLandscape" title="Landscape">▭</button>
+        </div>
+      </div>
       <div class="recording-face-control-row">
         <div class="recording-face-control-group recording-position-group">
           <span class="recording-setting-label" data-i18n="recordPosition">Position</span>
@@ -476,7 +488,13 @@
       <button id="recordStopBtn" class="recording-stop" data-i18n="recordStop">Stop and save</button>
       <button id="recordDiscardBtn" class="recording-discard" data-i18n="recordDiscard">Discard recording</button>
     </div>
-    <a id="recordDownloadLink" class="recording-download" data-i18n="recordDownload" hidden>Download video</a>
+    <div id="recordResult" class="recording-result" hidden>
+      <video id="recordResultPreview" class="recording-result-preview" controls playsinline></video>
+      <div class="recording-result-actions">
+        <a id="recordDownloadLink" class="recording-download" data-i18n="recordSave">Save video</a>
+        <button id="recordResultDiscardBtn" class="recording-discard" data-i18n="recordDiscard">Discard recording</button>
+      </div>
+    </div>
     <p id="recordingStatus" class="recording-status"></p>
   </section>
 
