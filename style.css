@@ -963,20 +963,31 @@ html, body {
 .pen-style-options button.active { color: white; background: #2563eb; }
 .pen-style-options svg { display: block; width: 30px; height: 16px; }
 
+.record-control-group { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+body.recording-active .record-control-group {
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: #dc2626;
+}
 .record-toolbar-btn { gap: 5px; }
 .record-stop-toolbar-btn[hidden] { display: none !important; }
 .record-stop-toolbar-btn {
   width: 34px;
   color: white;
-  background: #dc2626;
+  background: transparent;
+  border-left: 1px solid rgba(255,255,255,.28);
+  border-radius: 0;
 }
+.record-stop-toolbar-btn:hover:not(:disabled),
+.record-stop-toolbar-btn:active:not(:disabled) { background: rgba(127,29,29,.28); }
 .record-stop-toolbar-btn span { width: 11px; height: 11px; border-radius: 2px; background: white; }
 .record-dot { display: block; width: 15px; height: 15px; border: 3px solid #dc2626; border-radius: 50%; }
 .record-time:empty { display: none; }
-.record-toolbar-btn.recording { width: auto; min-width: 76px; padding: 0 10px; color: white; background: #dc2626; }
+.record-toolbar-btn.recording { width: auto; min-width: 76px; padding: 0 10px; color: white; background: transparent; border-radius: 0; }
 .record-toolbar-btn.recording .record-dot { width: 10px; height: 10px; border: 0; border-radius: 2px; background: white; }
 .record-toolbar-btn.recording .record-time { display: inline; font-size: 12px; font-variant-numeric: tabular-nums; }
-.record-toolbar-btn.recording.paused { background: #d97706; }
+.record-control-group:has(.record-toolbar-btn.paused) { background: #d97706; }
+.record-toolbar-btn.recording.paused { background: transparent; }
 
 .recording-menu {
   position: fixed;
@@ -1070,7 +1081,10 @@ html, body {
 }
 .recording-result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .recording-result-actions .recording-download,
-.recording-result-actions .recording-discard { margin-top: 0; }
+.recording-result-actions .recording-discard {
+  margin-top: 0;
+  font: 700 14px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
 .recording-status { min-height: 16px; margin: 7px 2px 0; color: #64748b; font-size: 12px; }
 .recording-status.error { color: #dc2626; }
 .recording-face-preview {

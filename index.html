@@ -111,12 +111,14 @@
             <circle cx="17" cy="8" r="5"/>
           </svg>
         </button>
-        <button id="recordBtnMobile" class="toolbar-btn record-toolbar-btn" data-i18n-title="recordLesson" title="Record Lesson">
-          <span class="record-dot"></span><span class="record-time"></span>
-        </button>
-        <button id="recordStopToolbarBtnMobile" class="toolbar-btn record-stop-toolbar-btn" data-i18n-title="recordStop" title="Stop and save" hidden>
-          <span></span>
-        </button>
+        <div class="record-control-group">
+          <button id="recordBtnMobile" class="toolbar-btn record-toolbar-btn" data-i18n-title="recordLesson" title="Record Lesson">
+            <span class="record-dot"></span><span class="record-time"></span>
+          </button>
+          <button id="recordStopToolbarBtnMobile" class="toolbar-btn record-stop-toolbar-btn" data-i18n-title="recordStop" title="Stop and save" hidden>
+            <span></span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -203,12 +205,14 @@
         <span class="save-status-icon">✓</span>
         <span class="save-status-label" data-i18n="saveStatusSaved">Saved</span>
       </div>
-      <button id="recordBtn" class="toolbar-btn record-toolbar-btn desktop-only" data-i18n-title="recordLesson" title="Record Lesson">
-        <span class="record-dot"></span><span class="record-time"></span>
-      </button>
-      <button id="recordStopToolbarBtn" class="toolbar-btn record-stop-toolbar-btn desktop-only" data-i18n-title="recordStop" title="Stop and save" hidden>
-        <span></span>
-      </button>
+      <div class="record-control-group desktop-only">
+        <button id="recordBtn" class="toolbar-btn record-toolbar-btn" data-i18n-title="recordLesson" title="Record Lesson">
+          <span class="record-dot"></span><span class="record-time"></span>
+        </button>
+        <button id="recordStopToolbarBtn" class="toolbar-btn record-stop-toolbar-btn" data-i18n-title="recordStop" title="Stop and save" hidden>
+          <span></span>
+        </button>
+      </div>
       <!-- Desktop-only action buttons -->
       <button id="importBtn" class="toolbar-btn desktop-only" data-i18n-title="importTitle" title="Import Image">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

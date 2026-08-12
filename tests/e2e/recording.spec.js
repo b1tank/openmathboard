@@ -126,6 +126,11 @@ test.describe('Course recording', () => {
 		}));
 		expect(result.href).toMatch(/^blob:/);
 		expect(result.download).toMatch(/\.(mp4|webm)$/);
+		const download = page.waitForEvent('download');
+		await page.locator('#recordDownloadLink').click();
+		await download;
+		await expect(page.locator('#recordResult')).toBeHidden();
+		await expect(page.locator('#recordStartBtn')).not.toHaveAttribute('hidden');
 	});
 
 	test('stopped recording can be previewed then discarded', async ({ page }) => {

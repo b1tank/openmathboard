@@ -436,6 +436,16 @@ function discardRecording() {
 	recorder.stop();
 }
 
+function acceptResultDownload() {
+	// Let Safari start consuming the Blob URL before returning to idle state.
+	setTimeout(() => {
+		const { result, startBtn } = elements();
+		result.hidden = true;
+		startBtn.hidden = false;
+		menu.classList.remove('show');
+	}, 0);
+}
+
 function discardResult() {
 	if (!resultUrl || !confirm(t('recordDiscardConfirm'))) return;
 	const { result, resultPreview, download, startBtn } = elements();
@@ -586,7 +596,7 @@ export function initRecording() {
 	});
 	const {
 		buttons, toolbarStopButtons, faceToggle, livePreviewToggle,
-		startBtn, pauseBtn, stopBtn, discardBtn, resultDiscardBtn
+		startBtn, pauseBtn, stopBtn, discardBtn, resultDiscardBtn, download
 	} = elements();
 	buttons.forEach(button => button.addEventListener('click', event => {
 		event.stopPropagation();
@@ -618,6 +628,7 @@ export function initRecording() {
 	stopBtn.addEventListener('click', stopRecording);
 	discardBtn.addEventListener('click', discardRecording);
 	resultDiscardBtn.addEventListener('click', discardResult);
+	download.addEventListener('click', acceptResultDownload);
 	facePreview.addEventListener('pointerdown', startFaceDrag);
 	facePreview.addEventListener('pointermove', moveFaceDrag);
 	facePreview.addEventListener('pointerup', stopFaceDrag);
