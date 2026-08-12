@@ -47,6 +47,10 @@ test.describe('Shape anchors', () => {
 			onAnchorDrag(parabola, 'horizontal-scale', { x: 160, y: 90 });
 			const newRightY = parabola.shape.a * (parabola.shape.xMax - parabola.shape.h) ** 2 + parabola.shape.k;
 			const newLeftY = parabola.shape.a * (parabola.shape.xMin - parabola.shape.h) ** 2 + parabola.shape.k;
+			const asymmetricAfterScale = { xMin: parabola.shape.xMin, xMax: parabola.shape.xMax };
+			parabola.shape.symmetricEndpoints = true;
+			onAnchorDrag(parabola, 'left', { x: 70, y: 0 });
+			const symmetricAfterLeft = { xMin: parabola.shape.xMin, xMax: parabola.shape.xMax };
 			const waveRightHandle = findAnchorAtPoint(wave, { x: 300, y: 100 }, camera)?.id;
 			const periodStartX = getAnchors(wave, camera).find(anchor => anchor.id === 'period').x;
 			onAnchorDrag(wave, 'period', { x: periodStartX + 160, y: 100 }, {
@@ -68,6 +72,8 @@ test.describe('Shape anchors', () => {
 				newRightY,
 				oldLeftY,
 				newLeftY,
+				asymmetricAfterScale,
+				symmetricAfterLeft,
 				waveRightHandle,
 				periodAfterScrub,
 				periodAnchorX,
@@ -85,14 +91,36 @@ test.describe('Shape anchors', () => {
 		expect(result.aAfterCrop).toBeCloseTo(result.aAfterVerticalScale, 8);
 		// Left was cropped to 50 and right to 80 before scaling. Moving the right
 		// scale handle to 60 applies a 0.75 ratio to both, preserving asymmetry.
-		expect(result.parabola.xMin).toBeCloseTo(62.5, 8);
-		expect(result.parabola.xMax).toBe(160);
+		expect(result.asymmetricAfterScale.xMin).toBeCloseTo(62.5, 8);
+		expect(result.asymmetricAfterScale.xMax).toBe(160);
 		expect(result.newRightY).toBeCloseTo(result.oldRightY, 8);
 		expect(result.newLeftY).toBeCloseTo(result.oldLeftY, 8);
+		expect(result.symmetricAfterLeft).toEqual({ xMin: 70, xMax: 130 });
 		expect(result.waveRightHandle).toBe('right');
 		expect(result.periodAfterScrub).toBeCloseTo(200 * Math.E, 8);
 		expect(result.periodAnchorX).toBe(200);
 		expect(result.wave).toMatchObject({ C: 150, D: 130, xMin: -50, xMax: 350 });
+	});
+
+	test('parabola property panel exposes an endpoint symmetry lock', async ({ page }) => {
+		await page.evaluate(async () => {
+			const state = await import('/src/core/state.js');
+			state.setStrokes([{
+				color: '#000', width: 4, dash: false,
+				shape: { type: 'parabola', h: 100, k: 100, a: -0.01, xMin: 50, xMax: 170 },
+				points: []
+			}]);
+		});
+		await page.locator('#selectBtn').click();
+		await page.locator('#liveCanvas').click({ position: { x: 100, y: 100 } });
+		const symmetry = page.locator('#propSymmetryBtn');
+		await expect(symmetry).toBeVisible();
+		await symmetry.click();
+		await expect(symmetry).toHaveClass(/active/);
+		const enabled = await page.evaluate(async () =>
+			(await import('/src/core/state.js')).getStrokes()[0].shape.symmetricEndpoints
+		);
+		expect(enabled).toBe(true);
 	});
 
 	test('rotated resize handles use local coordinates and freehand rotation works', async ({ page }) => {

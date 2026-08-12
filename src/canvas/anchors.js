@@ -207,6 +207,8 @@ export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 		return;
 	}
 
+	const mirrorEndpoints = !!obj.shape?.symmetricEndpoints || !!newWorldPos.rawEvent?.shiftKey;
+
 	// Parameters are stored in unrotated coordinates. Movement controls follow
 	// the pointer in world space; resize controls need the inverse rotation.
 	const localPos = ['center', 'vertical-scale', 'midline'].includes(anchorId)
@@ -293,8 +295,14 @@ export function onAnchorDrag(obj, anchorId, newWorldPos, dragInfo) {
 				s.xMax = s.h + newRight;
 				s.a /= ratio * ratio;
 			}
-			if (anchorId === 'left') s.xMin = Math.min(newWorldPos.x, s.h - 5);
-			if (anchorId === 'right') s.xMax = Math.max(newWorldPos.x, s.h + 5);
+			if (anchorId === 'left') {
+				s.xMin = Math.min(newWorldPos.x, s.h - 5);
+				if (mirrorEndpoints) s.xMax = s.h + (s.h - s.xMin);
+			}
+			if (anchorId === 'right') {
+				s.xMax = Math.max(newWorldPos.x, s.h + 5);
+				if (mirrorEndpoints) s.xMin = s.h - (s.xMax - s.h);
+			}
 			regenerateParabolaPoints(obj);
 			break;
 		case 'sine':

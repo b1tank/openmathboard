@@ -141,6 +141,7 @@ export const TRANSLATIONS = {
 
 		// Property panel
 		propDelete: 'Delete',
+		propSymmetry: 'Mirror endpoint cropping',
 
 		// Shape palette
 		shapePalette: 'Shapes',
@@ -288,6 +289,7 @@ export const TRANSLATIONS = {
 
 		// Property panel
 		propDelete: '删除',
+		propSymmetry: '对称裁剪端点',
 
 		// Shape palette
 		shapePalette: '形状',

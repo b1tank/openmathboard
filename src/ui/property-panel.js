@@ -37,6 +37,18 @@ export function initPropertyPanel() {
 		});
 	});
 
+	const symmetryBtn = document.getElementById('propSymmetryBtn');
+	if (symmetryBtn) {
+		symmetryBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			applyToSelected(stroke => {
+				if (stroke.shape?.type === 'parabola') {
+					stroke.shape.symmetricEndpoints = !stroke.shape.symmetricEndpoints;
+				}
+			});
+		});
+	}
+
 	const deleteBtn = document.getElementById('propDeleteBtn');
 	if (deleteBtn) {
 		deleteBtn.addEventListener('click', (e) => {
@@ -101,6 +113,15 @@ function highlightCurrentState() {
 		const isDash = btn.dataset.dash === 'true';
 		btn.classList.toggle('active', allSameDash && isDash === !!ref.dash);
 	});
+
+	// Parabola-only endpoint symmetry lock. It does not alter existing crops;
+	// the next endpoint drag chooses the mirrored distance.
+	const symmetryBtn = document.getElementById('propSymmetryBtn');
+	if (symmetryBtn) {
+		const showSymmetry = selected.length === 1 && ref.shape?.type === 'parabola';
+		symmetryBtn.hidden = !showSymmetry;
+		symmetryBtn.classList.toggle('active', showSymmetry && !!ref.shape.symmetricEndpoints);
+	}
 }
 
 // ============ Show / Hide / Position ============

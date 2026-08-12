@@ -117,6 +117,12 @@
   background: #e5e7eb;
 }
 
+.prop-symmetry[hidden] { display: none !important; }
+.prop-symmetry.active {
+  color: white;
+  background: #2563eb !important;
+}
+
 .prop-delete {
   display: flex;
   align-items: center;
