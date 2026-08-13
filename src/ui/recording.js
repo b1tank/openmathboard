@@ -55,10 +55,6 @@ let faceDragOffset = { x: 0, y: 0 };
 function elements() {
 	return {
 		buttons: [document.getElementById('recordBtn'), document.getElementById('recordBtnMobile')].filter(Boolean),
-		toolbarStopButtons: [
-			document.getElementById('recordStopToolbarBtn'),
-			document.getElementById('recordStopToolbarBtnMobile')
-		].filter(Boolean),
 		menuTimer: document.getElementById('recordingMenuTimer'),
 		micToggle: document.getElementById('recordMicToggle'),
 		faceToggle: document.getElementById('recordFaceToggle'),
@@ -89,6 +85,9 @@ function toggleMenu() {
 	const opening = !menu.classList.contains('show');
 	if (opening) closeOtherMenus();
 	menu.classList.toggle('show', opening);
+	if (opening && !recorder && elements().faceToggle.checked && !cameraPreviewStream) {
+		handleFaceToggle();
+	}
 	requestAnimationFrame(applyFacePreviewPosition);
 	if (!opening && !recorder) updatePropertyPanel();
 }
@@ -156,6 +155,8 @@ async function startCameraPreview() {
 function stopCameraPreview() {
 	cameraPreviewStream?.getTracks().forEach(track => track.stop());
 	cameraPreviewStream = null;
+	cameraRequest = null;
+	facePreview.pause();
 	facePreview.srcObject = null;
 	facePreview.hidden = true;
 	facePreview.style.visibility = '';
@@ -187,13 +188,16 @@ async function handleFaceToggle() {
 }
 
 function setRecordingUi(recording) {
-	const {
-		buttons, toolbarStopButtons, micToggle, faceToggle,
-		startBtn, activeControls, result
-	} = elements();
-	buttons.forEach(button => button.classList.toggle('recording', recording));
+	const { buttons, micToggle, faceToggle, startBtn, activeControls, result } = elements();
+	buttons.forEach(button => {
+		button.classList.toggle('recording', recording);
+		button.title = recording ? t('recordPause') : t('recordLesson');
+	});
 	document.body.classList.toggle('recording-active', recording);
-	toolbarStopButtons.forEach(button => { button.hidden = !recording; });
+	if (!recording) {
+		document.body.classList.remove('recording-paused');
+		elements().pauseBtn.classList.remove('resume');
+	}
 	// An acquired microphone can be muted/unmuted during recording. If the
 	// session started without one, enabling it would require a new permission
 	// flow and cannot be added to the active MediaRecorder stream safely.
@@ -406,14 +410,24 @@ function togglePause() {
 		pausedAt = Date.now();
 		clearInterval(timerId); timerId = null;
 		pauseBtn.textContent = t('recordResume');
-		buttons.forEach(button => button.classList.add('paused'));
+		pauseBtn.classList.add('resume');
+		buttons.forEach(button => {
+			button.classList.add('paused');
+			button.title = t('recordPaused');
+		});
+		document.body.classList.add('recording-paused');
 		setStatus(t('recordPaused'));
 	} else if (recorder.state === 'paused') {
 		recorder.resume();
 		totalPausedMs += Date.now() - pausedAt;
 		pausedAt = null;
 		pauseBtn.textContent = t('recordPause');
-		buttons.forEach(button => button.classList.remove('paused'));
+		pauseBtn.classList.remove('resume');
+		buttons.forEach(button => {
+			button.classList.remove('paused');
+			button.title = t('recordPause');
+		});
+		document.body.classList.remove('recording-paused');
 		updateTimer();
 		timerId = setInterval(updateTimer, 1000);
 		setStatus(t('recordRecording'));
@@ -465,10 +479,14 @@ function releaseMedia() {
 	if (compositorFrame !== null) cancelAnimationFrame(compositorFrame);
 	compositorFrame = null;
 	clearInterval(timerId); timerId = null;
+	// Terminal recording states always release every acquired device. Keeping a
+	// checked Face setting only remembers intent; the next session must acquire
+	// a fresh camera stream instead of reusing a frozen Safari frame.
 	recordingStream?.getTracks().forEach(track => track.stop());
-	mediaStream?.getAudioTracks().forEach(track => track.stop());
-	recordingStream = null; mediaStream = null;
-	if (!elements().faceToggle.checked) stopCameraPreview();
+	mediaStream?.getTracks().forEach(track => track.stop());
+	recordingStream = null;
+	mediaStream = null;
+	stopCameraPreview();
 }
 
 function failRecording(error) {
@@ -595,16 +613,21 @@ export function initRecording() {
 		if (!recorder) updatePropertyPanel();
 	});
 	const {
-		buttons, toolbarStopButtons, faceToggle, livePreviewToggle,
-		startBtn, pauseBtn, stopBtn, discardBtn, resultDiscardBtn, download
+		buttons, faceToggle, livePreviewToggle, startBtn,
+		pauseBtn, stopBtn, discardBtn, resultDiscardBtn, download
 	} = elements();
 	buttons.forEach(button => button.addEventListener('click', event => {
 		event.stopPropagation();
-		toggleMenu();
-	}));
-	toolbarStopButtons.forEach(button => button.addEventListener('click', event => {
-		event.stopPropagation();
-		stopRecording();
+		if (!recorder) {
+			toggleMenu();
+			return;
+		}
+		// During recording the toolbar is timer-only. Tapping it immediately
+		// pauses and reveals controls, removing the extra pause step.
+		if (recorder.state === 'recording') togglePause();
+		closeOtherMenus();
+		menu.classList.add('show');
+		requestAnimationFrame(applyFacePreviewPosition);
 	}));
 	faceToggle.addEventListener('change', handleFaceToggle);
 	livePreviewToggle.addEventListener('change', updateLivePreview);

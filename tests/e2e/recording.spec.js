@@ -45,6 +45,8 @@ test.describe('Course recording', () => {
 			await page.locator('#recordFaceSettings').evaluate(settings => { settings.hidden = false; });
 		}
 		await expect(page.locator('#recordFaceSettings')).toBeVisible();
+		await expect(page.locator('.recording-aspect-label')).toHaveText('方向');
+		expect(await page.locator('[data-size]').allTextContents()).toEqual(['小', '中', '大']);
 		await expect(page.locator('[data-aspect="portrait"]')).toHaveClass(/active/);
 		await page.locator('[data-aspect="landscape"]').click();
 		await expect(page.locator('[data-aspect="landscape"]')).toHaveClass(/active/);
@@ -83,6 +85,7 @@ test.describe('Course recording', () => {
 		await page.locator('#menuDropdown [data-action="language-toggle"]').click();
 		const languageAfter = await page.locator('#menuLanguageValue').textContent();
 		expect(languageAfter).not.toBe(languageBefore);
+		expect(await page.locator('[data-size]').allTextContents()).toEqual(['S', 'M', 'L']);
 	});
 
 	test('camera window defaults to the device orientation', async ({ page }) => {
@@ -106,16 +109,33 @@ test.describe('Course recording', () => {
 		await expect(page.locator('#recordBtn')).toHaveClass(/recording/);
 		await page.waitForTimeout(600);
 
+		await expect(page.locator('#recordBtn .record-dot')).toBeHidden();
 		await page.locator('#recordBtn').click();
-		await page.locator('#recordPauseBtn').click();
+		await expect(page.locator('#recordingMenu')).toHaveClass(/show/);
+		await expect(page.locator('body')).toHaveClass(/recording-paused/);
 		await expect(page.locator('#recordPauseBtn')).toHaveText(/Resume|继续/);
+		await expect(page.locator('#recordPauseBtn')).toHaveClass(/resume/);
+		await page.waitForTimeout(250); // allow toolbar background transition to settle
+		const pausedColors = await page.evaluate(() => ({
+			timer: getComputedStyle(document.getElementById('recordBtn')).backgroundColor,
+			resume: getComputedStyle(document.getElementById('recordPauseBtn')).backgroundColor,
+			stop: getComputedStyle(document.getElementById('recordStopBtn')).backgroundColor
+		}));
+		expect(pausedColors).toEqual({
+			timer: 'rgb(245, 158, 11)',
+			resume: 'rgb(22, 163, 74)',
+			stop: 'rgb(37, 99, 235)'
+		});
 		await page.locator('#recordPauseBtn').click();
 		await expect(page.locator('#recordingMenu')).not.toHaveClass(/show/);
+		await expect(page.locator('body')).not.toHaveClass(/recording-paused/);
 		await page.waitForTimeout(500);
 
-		await expect(page.locator('#recordStopToolbarBtn')).toBeVisible();
-		await expect(page.locator('#recordStopToolbarBtnMobile')).not.toHaveAttribute('hidden');
-		await page.locator('#recordStopToolbarBtn').click();
+		await expect(page.locator('#recordStopToolbarBtn')).toHaveCount(0);
+		await expect(page.locator('#recordStopToolbarBtnMobile')).toHaveCount(0);
+		await page.locator('#recordBtn').click();
+		await expect(page.locator('#recordPauseBtn')).toHaveText(/Resume|继续/);
+		await page.locator('#recordStopBtn').click();
 		await expect(page.locator('#recordResult')).toBeVisible();
 		await expect(page.locator('#recordResultPreview')).toBeVisible();
 		await expect(page.locator('#recordDownloadLink')).toBeVisible();
@@ -143,12 +163,63 @@ test.describe('Course recording', () => {
 		await page.locator('#recordMicToggle').uncheck();
 		await page.locator('#recordStartBtn').click();
 		await page.waitForTimeout(300);
-		await page.locator('#recordStopToolbarBtn').click();
+		await page.locator('#recordBtn').click();
+		await page.locator('#recordStopBtn').click();
 		await expect(page.locator('#recordResultPreview')).toBeVisible();
 		page.once('dialog', dialog => dialog.accept());
 		await page.locator('#recordResultDiscardBtn').click();
 		await expect(page.locator('#recordResult')).toBeHidden();
 		await expect(page.locator('#recordingMenu')).not.toHaveClass(/show/);
+	});
+
+	test('discard releases camera and the next session gets a fresh stream', async ({ page, browserName }) => {
+		test.skip(browserName === 'webkit', 'Synthetic camera playback is not reliable in Playwright WebKit');
+		await page.goto('/');
+		await waitForCanvas(page);
+		test.skip(!await page.evaluate(() =>
+			typeof document.createElement('canvas').captureStream === 'function' && typeof MediaRecorder !== 'undefined'
+		), 'This Playwright browser build does not expose canvas recording');
+		await page.evaluate(() => {
+			window.__OMB_CAMERA_STREAMS = [];
+			window.__OMB_GET_USER_MEDIA = async constraints => {
+				if (!constraints.video) return new MediaStream();
+				const canvas = document.createElement('canvas');
+				canvas.width = 640; canvas.height = 480;
+				canvas.getContext('2d').fillRect(0, 0, 640, 480);
+				const stream = canvas.captureStream(5);
+				window.__OMB_CAMERA_STREAMS.push(stream);
+				return stream;
+			};
+		});
+
+		await page.locator('#recordBtn').click();
+		await page.locator('#recordMicToggle').uncheck();
+		await page.locator('#recordFaceToggle').check();
+		await expect(page.locator('#recordingFacePreview')).toBeVisible();
+		await page.locator('#recordStartBtn').click();
+		await page.locator('#recordBtn').click();
+		page.once('dialog', dialog => dialog.accept());
+		await page.locator('#recordDiscardBtn').click();
+		await expect(page.locator('#recordingFacePreview')).toBeHidden();
+		const firstSession = await page.evaluate(() => ({
+			count: window.__OMB_CAMERA_STREAMS.length,
+			states: window.__OMB_CAMERA_STREAMS[0].getTracks().map(track => track.readyState)
+		}));
+		expect(firstSession).toEqual({ count: 1, states: ['ended'] });
+
+		await page.locator('#recordBtn').click();
+		await expect(page.locator('#recordingFacePreview')).toBeVisible();
+		const secondSession = await page.evaluate(() => ({
+			count: window.__OMB_CAMERA_STREAMS.length,
+			state: window.__OMB_CAMERA_STREAMS[1].getVideoTracks()[0].readyState
+		}));
+		expect(secondSession).toEqual({ count: 2, state: 'live' });
+		await page.locator('#recordStartBtn').click();
+		expect(await page.evaluate(() => window.__OMB_CAMERA_STREAMS.length)).toBe(2);
+
+		await page.locator('#recordBtn').click();
+		page.once('dialog', dialog => dialog.accept());
+		await page.locator('#recordDiscardBtn').click();
 	});
 
 	test('discard asks for confirmation and produces no download', async ({ page }) => {

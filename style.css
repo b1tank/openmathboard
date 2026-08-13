@@ -963,31 +963,27 @@ html, body {
 .pen-style-options button.active { color: white; background: #2563eb; }
 .pen-style-options svg { display: block; width: 30px; height: 16px; }
 
-.record-control-group { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
-body.recording-active .record-control-group {
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: #dc2626;
-}
-.record-toolbar-btn { gap: 5px; }
-.record-stop-toolbar-btn[hidden] { display: none !important; }
-.record-stop-toolbar-btn {
-  width: 34px;
-  color: white;
-  background: transparent;
-  border-left: 1px solid rgba(255,255,255,.28);
-  border-radius: 0;
-}
-.record-stop-toolbar-btn:hover:not(:disabled),
-.record-stop-toolbar-btn:active:not(:disabled) { background: rgba(127,29,29,.28); }
-.record-stop-toolbar-btn span { width: 11px; height: 11px; border-radius: 2px; background: white; }
+.record-toolbar-btn { gap: 6px; flex-shrink: 0; }
 .record-dot { display: block; width: 15px; height: 15px; border: 3px solid #dc2626; border-radius: 50%; }
 .record-time:empty { display: none; }
-.record-toolbar-btn.recording { width: auto; min-width: 76px; padding: 0 10px; color: white; background: transparent; border-radius: 0; }
-.record-toolbar-btn.recording .record-dot { width: 10px; height: 10px; border: 0; border-radius: 2px; background: white; }
+.record-toolbar-btn.recording {
+  width: auto;
+  min-width: 64px;
+  padding: 0 11px;
+  color: white;
+  background: #dc2626;
+}
+.record-toolbar-btn.recording:hover:not(:disabled),
+.record-toolbar-btn.recording:active:not(:disabled) { background: #b91c1c; }
+.record-toolbar-btn.recording .record-dot { display: none; }
 .record-toolbar-btn.recording .record-time { display: inline; font-size: 12px; font-variant-numeric: tabular-nums; }
-.record-control-group:has(.record-toolbar-btn.paused) { background: #d97706; }
-.record-toolbar-btn.recording.paused { background: transparent; }
+.record-toolbar-btn.recording.paused,
+.record-toolbar-btn.recording.paused:hover:not(:disabled),
+.record-toolbar-btn.recording.paused:active:not(:disabled) {
+  color: #422006;
+  background: #f59e0b;
+}
+body.recording-paused #recordingMenuTimer { color: #b45309; }
 
 .recording-menu {
   position: fixed;
@@ -1027,7 +1023,18 @@ body.recording-active .record-control-group {
   font-weight: 600;
 }
 .recording-preview-toggle input { width: 18px; height: 18px; accent-color: #2563eb; }
-.recording-aspect { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.recording-aspect {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 4px 3px 8px;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #475569;
+}
+.recording-aspect-label { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.recording-aspect-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .recording-aspect button {
   width: 44px;
   min-height: 40px;
@@ -1067,8 +1074,10 @@ body.recording-active .record-control-group {
 .recording-active-controls .recording-stop,
 .recording-active-controls .recording-discard { margin-top: 0; }
 .recording-active-controls .recording-discard { grid-column: 1 / -1; }
-.recording-pause { color: #172033; background: #facc15; }
-.recording-stop { background: #dc2626; }
+.recording-pause { color: #422006; background: #facc15; }
+.recording-pause.resume { color: white; background: #16a34a; }
+.recording-pause.resume:hover { background: #15803d; }
+.recording-stop { background: #2563eb; }
 .recording-discard { color: #b91c1c; background: #fee2e2; }
 .recording-download { background: #16a34a; }
 .recording-result { margin-top: 10px; }

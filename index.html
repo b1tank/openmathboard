@@ -111,14 +111,9 @@
             <circle cx="17" cy="8" r="5"/>
           </svg>
         </button>
-        <div class="record-control-group">
-          <button id="recordBtnMobile" class="toolbar-btn record-toolbar-btn" data-i18n-title="recordLesson" title="Record Lesson">
-            <span class="record-dot"></span><span class="record-time"></span>
-          </button>
-          <button id="recordStopToolbarBtnMobile" class="toolbar-btn record-stop-toolbar-btn" data-i18n-title="recordStop" title="Stop and save" hidden>
-            <span></span>
-          </button>
-        </div>
+        <button id="recordBtnMobile" class="toolbar-btn record-toolbar-btn" data-i18n-title="recordLesson" title="Record Lesson">
+          <span class="record-dot"></span><span class="record-time"></span>
+        </button>
       </div>
     </div>
 
@@ -205,14 +200,9 @@
         <span class="save-status-icon">✓</span>
         <span class="save-status-label" data-i18n="saveStatusSaved">Saved</span>
       </div>
-      <div class="record-control-group desktop-only">
-        <button id="recordBtn" class="toolbar-btn record-toolbar-btn" data-i18n-title="recordLesson" title="Record Lesson">
-          <span class="record-dot"></span><span class="record-time"></span>
-        </button>
-        <button id="recordStopToolbarBtn" class="toolbar-btn record-stop-toolbar-btn" data-i18n-title="recordStop" title="Stop and save" hidden>
-          <span></span>
-        </button>
-      </div>
+      <button id="recordBtn" class="toolbar-btn record-toolbar-btn desktop-only" data-i18n-title="recordLesson" title="Record Lesson">
+        <span class="record-dot"></span><span class="record-time"></span>
+      </button>
       <!-- Desktop-only action buttons -->
       <button id="importBtn" class="toolbar-btn desktop-only" data-i18n-title="importTitle" title="Import Image">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -466,8 +456,11 @@
           <input id="recordLivePreviewToggle" type="checkbox" checked>
         </label>
         <div class="recording-aspect" role="group" aria-label="Camera window orientation">
-          <button data-aspect="portrait" data-i18n-title="recordPortrait" title="Portrait">▯</button>
-          <button data-aspect="landscape" data-i18n-title="recordLandscape" title="Landscape">▭</button>
+          <span class="recording-aspect-label" data-i18n="recordOrientation">Orientation</span>
+          <div class="recording-aspect-buttons">
+            <button data-aspect="portrait" data-i18n-title="recordPortrait" title="Portrait">▯</button>
+            <button data-aspect="landscape" data-i18n-title="recordLandscape" title="Landscape">▭</button>
+          </div>
         </div>
       </div>
       <div class="recording-face-control-row">
@@ -481,7 +474,7 @@
         <div class="recording-face-control-group">
           <span class="recording-setting-label" data-i18n="recordFaceSize">Face size</span>
           <div class="recording-sizes" role="group" aria-label="Face size">
-            <button data-size="small">S</button><button class="active" data-size="medium">M</button><button data-size="large">L</button>
+            <button data-size="small" data-i18n="recordSizeSmall">S</button><button class="active" data-size="medium" data-i18n="recordSizeMedium">M</button><button data-size="large" data-i18n="recordSizeLarge">L</button>
           </div>
         </div>
       </div>
