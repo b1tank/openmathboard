@@ -840,6 +840,25 @@ html, body {
   }
 }
 
+/* The wide toolbar uses the same compact drawing controls as iOS. Keep the
+   legacy individual pickers in the DOM for state synchronization only. */
+.toolbar-center .color-picker,
+.toolbar-center .stroke-picker,
+.toolbar-center #dashBtn {
+  display: none;
+}
+
+/* Collapse secondary actions when the full right-hand group no longer fits. */
+@media (min-width: 601px) and (max-width: 900px) {
+  .toolbar-right .desktop-only {
+    display: none !important;
+  }
+
+  .menu-wrapper {
+    display: block;
+  }
+}
+
 /* Narrow screens: show mobile tools in topbar + hamburger menu on right */
 @media (max-width: 600px) {
   .save-status {

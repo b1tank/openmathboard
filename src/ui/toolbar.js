@@ -167,7 +167,7 @@ function setupMobileToolbar() {
 	if (refs.redoBtnMobile) refs.redoBtnMobile.addEventListener('click', redo);
 	if (refs.penBtnMobile) refs.penBtnMobile.addEventListener('click', () => setTool(TOOLS.PEN));
 
-	const penStyleBtn = document.getElementById('penStyleBtnMobile');
+	const penStyleBtns = document.querySelectorAll('.pen-style-btn');
 	const penStylePanel = document.getElementById('penStylePanelMobile');
 	const syncPenStylePanel = () => {
 		if (!penStylePanel) return;
@@ -177,23 +177,25 @@ function setupMobileToolbar() {
 		penStylePanel.querySelectorAll('.pen-panel-color').forEach(btn => btn.classList.toggle('active', btn.dataset.color === color));
 		penStylePanel.querySelectorAll('.pen-panel-width').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.width) === width));
 		penStylePanel.querySelectorAll('.pen-panel-dash').forEach(btn => btn.classList.toggle('active', (btn.dataset.dash === 'true') === dash));
-		const indicator = penStyleBtn?.querySelector('.pen-style-color');
-		if (indicator) indicator.style.background = color;
-		const line = penStyleBtn?.querySelector('.pen-style-line');
-		if (line) {
-			line.style.height = Math.max(2, Math.min(6, width * 0.75)) + 'px';
-			line.classList.toggle('dashed', dash);
-		}
+		penStyleBtns.forEach(penStyleBtn => {
+			const indicator = penStyleBtn.querySelector('.pen-style-color');
+			if (indicator) indicator.style.background = color;
+			const line = penStyleBtn.querySelector('.pen-style-line');
+			if (line) {
+				line.style.height = Math.max(2, Math.min(6, width * 0.75)) + 'px';
+				line.classList.toggle('dashed', dash);
+			}
+		});
 	};
-	if (penStyleBtn && penStylePanel) {
-		penStyleBtn.addEventListener('click', (e) => {
+	if (penStyleBtns.length && penStylePanel) {
+		penStyleBtns.forEach(penStyleBtn => penStyleBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			closeShapePaletteWithUI();
 			document.getElementById('recordingMenu')?.classList.remove('show');
 			setTool(TOOLS.PEN);
 			syncPenStylePanel();
 			penStylePanel.classList.toggle('show');
-		});
+		}));
 		penStylePanel.querySelectorAll('.pen-panel-color').forEach(btn => btn.addEventListener('click', () => {
 			setColor(btn.dataset.color); syncPenStylePanel();
 		}));
