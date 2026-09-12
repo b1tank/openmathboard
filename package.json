@@ -7,10 +7,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "npx playwright test",
-    "test:headed": "npx playwright test --headed"
+    "test:headed": "npx playwright test --headed",
+    "deploy:cloudflare": "npm run build && wrangler deploy"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "vite": "^8.2.1"
+    "vite": "^8.2.1",
+    "wrangler": "^4.131.1"
   }
 }
