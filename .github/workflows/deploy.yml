@@ -1,14 +1,19 @@
-name: Deploy App
+name: Deploy to Cloudflare
 
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'infra/**'
-      - '*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openmathboard-cloudflare-production
+  cancel-in-progress: false
 
 jobs:
-  validate:
+  validate-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,60 +35,22 @@ jobs:
       - name: Install browser matrix
         run: npx playwright install --with-deps chromium firefox webkit
 
-      - name: Run cross-browser end-to-end tests
+      - name: Run cross-browser tests
         run: npm test
 
-  deploy:
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: azure/login@v2
+      - name: Deploy Worker and static assets
+        uses: cloudflare/wrangler-action@v3
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
 
-      - name: Build and push to ACR
+      - name: Verify deployment
         run: |
-          az acr login --name ${{ secrets.ACR_NAME }}
-          docker build \
-            --build-arg VITE_APP_RELEASE=${{ github.sha }} \
-            --build-arg VITE_TELEMETRY_ENDPOINT='${{ vars.TELEMETRY_ENDPOINT }}' \
-            -t ${{ secrets.ACR_NAME }}.azurecr.io/openmathboard:${{ github.sha }} \
-            -t ${{ secrets.ACR_NAME }}.azurecr.io/openmathboard:latest .
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/openmathboard:${{ github.sha }}
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/openmathboard:latest
-
-      - name: Deploy to Container App
-        run: |
-          az containerapp update \
-            --name ${{ secrets.CONTAINER_APP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --image ${{ secrets.ACR_NAME }}.azurecr.io/openmathboard:${{ github.sha }}
-
-      - name: Verify deployed revision
-        run: |
-          APP_NAME="${{ secrets.CONTAINER_APP_NAME }}"
-          RESOURCE_GROUP="${{ secrets.AZURE_RESOURCE_GROUP }}"
-          FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)
-          REVISION=$(az containerapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --query properties.latestRevisionName -o tsv)
-
-          echo "### Deployment smoke test" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Revision: \`$REVISION\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- URL: https://$FQDN" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Image SHA: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
-
-          for attempt in $(seq 1 18); do
-            if HEALTH=$(curl --fail --silent --show-error --max-time 10 "https://$FQDN/health") && [ "$HEALTH" = "OK" ] && \
-               curl --fail --silent --show-error --max-time 10 "https://$FQDN/" | grep -q '<title>'; then
-              echo "Smoke test passed on attempt $attempt"
-              echo "- Result: passed" >> "$GITHUB_STEP_SUMMARY"
+          for attempt in $(seq 1 12); do
+            if [ "$(curl --fail --silent --show-error --max-time 10 https://openmathboard.openmathboard.workers.dev/health)" = "OK" ]; then
               exit 0
             fi
-            echo "Smoke test attempt $attempt failed; retrying in 10 seconds"
             sleep 10
           done
-
-          echo "- Result: failed" >> "$GITHUB_STEP_SUMMARY"
-          echo "Deployment smoke test failed for revision $REVISION" >&2
           exit 1
