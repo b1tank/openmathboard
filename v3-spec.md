@@ -30,7 +30,7 @@ Known production blockers: images are still DOM-managed rather than persisted sc
 3. **Sign in and go** — One-click Microsoft/Google login. Boards auto-sync. Open any device, resume where you left off.
 4. **Share, don't collaborate (MVP)** — Teachers share read-only links with students. Real-time co-editing is Phase 2+.
 5. **OSS core, SaaS shell** — Core editor stays MIT. Cloud/auth layer is the product. Excalidraw model.
-6. **Azure-native** — Already on Container Apps. Extend with Entra External ID, Blob Storage, Cosmos DB, SignalR.
+6. **Edge-native** — Already on Container Apps. Extend with Entra External ID, Blob Storage, Cosmos DB, SignalR.
 
 ---
 
@@ -54,7 +54,7 @@ Known production blockers: images are still DOM-managed rather than persisted sc
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Auto-save to cloud | 📋 Planned | Debounced (2s), full board state → Azure Blob Storage |
+| Auto-save to cloud | 📋 Planned | Debounced (2s), full board state → Cloudflare D1 or a user-controlled storage provider |
 | Board list (dashboard) | 📋 Planned | Grid/list view, thumbnail, last-modified date, title |
 | Create new board | 📋 Planned | Blank, or from template |
 | Rename board | 📋 Planned | Inline edit on dashboard |
@@ -73,17 +73,17 @@ Board {
   title: string           // user-editable, default "Untitled Board"
   createdAt: ISO8601
   updatedAt: ISO8601
-  thumbnailUrl: string    // Azure Blob URL to PNG thumbnail
-  dataUrl: string         // Azure Blob URL to .openmathboard JSON
+  thumbnailUrl: string    // application storage URL to PNG thumbnail
+  dataUrl: string         // application storage URL to .openmathboard JSON
   isDeleted: boolean      // soft delete flag
   shareToken: string?     // nullable, generated on first share
 }
 ```
 
 **Storage architecture:**
-- **Metadata** → Azure Cosmos DB (board title, timestamps, userId, shareToken)
-- **Board data** → Azure Blob Storage (the full `.openmathboard` JSON file, gzipped)
-- **Thumbnails** → Azure Blob Storage (256×192 PNG, auto-generated client-side)
+- **Metadata** → Cloudflare D1 (board title, timestamps, userId, shareToken)
+- **Board data** → Cloudflare D1 or a user-controlled storage provider (the full `.openmathboard` JSON file, gzipped)
+- **Thumbnails** → Cloudflare D1 or a user-controlled storage provider (256×192 PNG, auto-generated client-side)
 
 ### Sync Strategy
 
@@ -165,7 +165,7 @@ Board {
 **Implementation:**
 - When teacher clicks "Share," generate a `shareToken` (nanoid, 12 chars) stored in Cosmos DB.
 - Share URL resolves to a read-only viewer (same canvas renderer, edit tools hidden).
-- Live updates: client polls `/api/boards/:shareToken/data` every 5 seconds. Server returns `304 Not Modified` if unchanged (via ETag). Upgrade to Azure SignalR for push in Phase 2.
+- Live updates: client polls `/api/boards/:shareToken/data` every 5 seconds. Server returns `304 Not Modified` if unchanged (via ETag). Upgrade to Durable Objects for push in Phase 2.
 
 ---
 
@@ -314,31 +314,31 @@ src/
 
 ```
 api/
-  server.js          — Express.js or Azure Functions entry
+  server.js          — Express.js or Cloudflare Workers entry
   routes/
     auth.js          — Token validation middleware
     boards.js        — GET/POST/PUT/DELETE /api/boards
     share.js         — GET /api/boards/:shareToken (public, no auth)
   services/
     cosmos.js        — Cosmos DB client (board metadata)
-    blob.js          — Azure Blob Storage client (board data + thumbnails)
+    blob.js          — Cloudflare D1 or a user-controlled storage provider client (board data + thumbnails)
   middleware/
     auth.js          — Validate Microsoft Entra External ID JWT
     cors.js          — CORS config
 ```
 
-### Azure Resources (extend existing infra/)
+### Cloudflare resources
 
 | Resource | Purpose | New? |
 |----------|---------|------|
 | Container App | Serve frontend + API | Existing (extend) |
 | Microsoft Entra External ID | User authentication | 📋 Planned |
 | Cosmos DB (serverless) | Board metadata | 📋 Planned |
-| Azure Blob Storage | Board data + thumbnails | 📋 Planned |
-| Azure SignalR Service | Push updates (Phase 2) | ❌ Phase 2 |
+| Cloudflare D1 or a user-controlled storage provider | Board data + thumbnails | 📋 Planned |
+| Durable Objects or WebSockets | Push updates (Phase 2) | ❌ Phase 2 |
 | Application Insights | Monitoring | Existing |
 | Grafana | Dashboards | Existing |
-| Azure CDN | Static asset caching | 📋 Planned (optional) |
+| Cloudflare CDN | Static asset caching | 📋 Planned (optional) |
 
 ### API Endpoints
 

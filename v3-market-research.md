@@ -252,8 +252,8 @@ Based on your goals and market research, here's the recommended split:
 ### Layer 2: SaaS Website (Proprietary, separate repo or directory)
 
 **What's behind the hosted service (openmathboard.com):**
-- User authentication (Email, Microsoft, Google via Azure AD B2C)
-- Cloud board storage & auto-sync (Azure Blob Storage + Cosmos DB)
+- User authentication (Email, Microsoft, Google via Cloudflare Access or an external identity provider)
+- Cloud board storage & auto-sync (Cloudflare D1 or a user-controlled storage provider + Cosmos DB)
 - Board management dashboard (list, rename, delete, organize)
 - Shareable read-only links (teacher → students)
 - Student view mode (live read-only mirror via SignalR/WebSocket)
