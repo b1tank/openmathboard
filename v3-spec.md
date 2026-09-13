@@ -30,7 +30,7 @@ Known production blockers: images are still DOM-managed rather than persisted sc
 3. **Sign in and go** — One-click Microsoft/Google login. Boards auto-sync. Open any device, resume where you left off.
 4. **Share, don't collaborate (MVP)** — Teachers share read-only links with students. Real-time co-editing is Phase 2+.
 5. **OSS core, SaaS shell** — Core editor stays MIT. Cloud/auth layer is the product. Excalidraw model.
-6. **Edge-native** — Already on Container Apps. Extend with Entra External ID, Blob Storage, Cosmos DB, SignalR.
+6. **Edge-native** — Already on Cloudflare Workers. Extend with a standards-based identity provider, D1, and Durable Objects only when the product needs them.
 
 ---
 
@@ -38,15 +38,15 @@ Known production blockers: images are still DOM-managed rather than persisted sc
 
 | Feature | Support | Details |
 |---------|---------|---------|
-| Email + password login | 📋 Planned | Microsoft Entra External ID custom policy |
-| Microsoft account login | 📋 Planned | Microsoft Entra External ID built-in provider |
-| Google account login | 📋 Planned | Microsoft Entra External ID social identity provider |
+| Email + password login | 📋 Planned | Managed identity provider; provider selection remains open |
+| Microsoft account login | 📋 Planned | OAuth/OIDC through the selected identity provider |
+| Google account login | 📋 Planned | OAuth/OIDC through the selected identity provider |
 | Apple ID login | ❌ Phase 2 | Add when iOS app is considered |
 | Anonymous / guest mode | ✅ Implemented | Current behavior — localStorage only, no cloud |
 | Session management | 📋 Planned | JWT tokens, 30-day refresh, secure httpOnly cookies |
 | Profile (name, avatar) | 📋 Planned | Pulled from identity provider, editable |
 
-**Implementation:** Microsoft Entra External ID handles all OAuth flows. Frontend gets a JWT, passes it as `Authorization: Bearer <token>` to the API. No password storage on our side.
+**Implementation direction:** use a managed OAuth/OIDC identity provider. The frontend receives a short-lived session and the API validates it without storing passwords. Select the provider through a separate architecture decision before implementation.
 
 ---
 
@@ -90,13 +90,13 @@ Board {
 ```
 ┌──────────────┐     save (debounced 2s)     ┌────────────┐
 │  Client JS   │ ──────────────────────────→  │  REST API  │
-│  (IndexedDB  │                              │ (Container  │
-│   + memory)  │ ←────────────────────────── │    App)     │
+│  (IndexedDB  │                              │  (Worker)   │
+│   + memory)  │ ←────────────────────────── │             │
 └──────────────┘    load on auth / page open  └────────────┘
                                                    │
                                           ┌────────┴────────┐
-                                          │  Cosmos DB      │  ← metadata
-                                          │  Blob Storage   │  ← board data
+                                          │  D1             │  ← metadata
+                                          │  App storage    │  ← board data
                                           └─────────────────┘
 ```
 
@@ -163,7 +163,7 @@ Board {
 **URL format:** `https://openmathboard.com/board/<shareToken>`
 
 **Implementation:**
-- When teacher clicks "Share," generate a `shareToken` (nanoid, 12 chars) stored in Cosmos DB.
+- When teacher clicks "Share," generate a `shareToken` (nanoid, 12 chars) stored in D1.
 - Share URL resolves to a read-only viewer (same canvas renderer, edit tools hidden).
 - Live updates: client polls `/api/boards/:shareToken/data` every 5 seconds. Server returns `304 Not Modified` if unchanged (via ETag). Upgrade to Durable Objects for push in Phase 2.
 
@@ -182,9 +182,9 @@ Board {
 
 **Implementation:**
 - Teacher publishes board + camera position to cloud every 2 seconds.
-- Student view fetches state via polling (or SignalR push later).
+- Student view fetches state via polling (or a Durable Object/WebSocket channel later).
 - "Follow teacher" syncs student camera to teacher's last camera state.
-- Minimal extra infra: same share link, same Blob data, just add `camera` to the polling response.
+- Minimal extra infrastructure: same share link and stored board data; add `camera` to the polling response.
 
 ---
 
@@ -292,7 +292,7 @@ src/
   ui/            — existing: toolbar, palette, export, etc.
   i18n/          — existing: i18n engine + strings
   NEW: auth/
-    auth.js      — Microsoft Entra External ID login/logout, token management
+    auth.js      — OAuth/OIDC login/logout and session management
     session.js   — JWT handling, refresh, session state
   NEW: cloud/
     api.js       — REST API client (boards CRUD, sync)
@@ -320,10 +320,10 @@ api/
     boards.js        — GET/POST/PUT/DELETE /api/boards
     share.js         — GET /api/boards/:shareToken (public, no auth)
   services/
-    cosmos.js        — Cosmos DB client (board metadata)
-    blob.js          — Cloudflare D1 or a user-controlled storage provider client (board data + thumbnails)
+    d1.js            — D1 client (board metadata)
+    storage.js       — D1 or a user-controlled storage provider client (board data + thumbnails)
   middleware/
-    auth.js          — Validate Microsoft Entra External ID JWT
+    auth.js          — Validate the selected provider's session/token
     cors.js          — CORS config
 ```
 
@@ -331,14 +331,13 @@ api/
 
 | Resource | Purpose | New? |
 |----------|---------|------|
-| Container App | Serve frontend + API | Existing (extend) |
-| Microsoft Entra External ID | User authentication | 📋 Planned |
-| Cosmos DB (serverless) | Board metadata | 📋 Planned |
-| Cloudflare D1 or a user-controlled storage provider | Board data + thumbnails | 📋 Planned |
+| Cloudflare Worker | Serve frontend and future API | ✅ Existing (extend) |
+| Managed OAuth/OIDC provider | User authentication | 📋 Planned; provider not selected |
+| Cloudflare D1 | Board metadata | 📋 Planned |
+| D1 or a user-controlled storage provider | Board data + thumbnails | 📋 Planned |
 | Durable Objects or WebSockets | Push updates (Phase 2) | ❌ Phase 2 |
-| Application Insights | Monitoring | Existing |
-| Grafana | Dashboards | Existing |
-| Cloudflare CDN | Static asset caching | 📋 Planned (optional) |
+| Workers logs and analytics | Monitoring | ✅ Existing |
+| Cloudflare edge cache | Static asset caching | ✅ Existing |
 
 ### API Endpoints
 
@@ -487,8 +486,8 @@ Estimates assume one experienced engineer using AI assistance heavily and includ
 
 | Task | Status | AI-assisted effort |
 |------|--------|---------------------|
-| Microsoft Entra External ID configuration | 📋 Planned | 5–10 days |
-| Board metadata/blob API with ETags | 📋 Planned | 2–3 weeks |
+| Managed OAuth/OIDC provider configuration | 📋 Planned | 5–10 days |
+| Board metadata/data API with ETags | 📋 Planned | 2–3 weeks |
 | Offline queue, retries, and conflict handling | 📋 Planned | 1–2 weeks |
 | Dashboard, thumbnails, rename/duplicate/trash | 📋 Planned | 2–4 weeks |
 | Guest-board migration on sign-in | 📋 Planned | 2–4 days |
