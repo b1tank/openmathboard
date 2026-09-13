@@ -50,7 +50,7 @@ The editor foundation and browser-local course recording are implemented. The ac
 1. **Release safety** — dependency upgrades, CI test gates, WebKit coverage, frontend telemetry
 2. **Data safety** — unified scene objects, IndexedDB, save lifecycle, bounded history, recovery
 3. **Lesson creation** — text/math notation, PDF annotation, pages, templates, correct SVG/PDF export
-4. **Cloud product** — Microsoft Entra External ID, multi-board dashboard, offline/cloud sync
+4. **Cloud product** — managed authentication, multi-board dashboard, offline/cloud sync
 5. **Classroom sharing** — read-only links, QR codes, student viewer, follow-teacher mode
 6. **School readiness** — accessibility, legal/DPA, LMS integrations, admin and operations
 

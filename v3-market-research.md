@@ -253,10 +253,10 @@ Based on your goals and market research, here's the recommended split:
 
 **What's behind the hosted service (openmathboard.com):**
 - User authentication (Email, Microsoft, Google via Cloudflare Access or an external identity provider)
-- Cloud board storage & auto-sync (Cloudflare D1 or a user-controlled storage provider + Cosmos DB)
+- Cloud board storage and auto-sync (Cloudflare D1 or a user-controlled storage provider)
 - Board management dashboard (list, rename, delete, organize)
 - Shareable read-only links (teacher → students)
-- Student view mode (live read-only mirror via SignalR/WebSocket)
+- Student view mode (live read-only mirror via polling or Durable Objects/WebSockets)
 - Board templates (coordinate plane, blank, graph paper, number line)
 - Usage analytics
 

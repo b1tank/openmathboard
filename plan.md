@@ -919,8 +919,8 @@ Target: 6–10 focused weeks.
 
 | ID | Task | Effort | Depends on | Acceptance |
 |----|------|--------|------------|------------|
-| PR-301 | Configure Microsoft Entra External ID | M | Legal/privacy baseline | Google/Microsoft login and secure logout work |
-| PR-302 | Board metadata API and Blob Storage service | L | PR-101 | Authenticated CRUD with ownership enforcement |
+| PR-301 | Select and configure a managed OAuth/OIDC provider | M | Legal/privacy baseline | Google/Microsoft login and secure logout work |
+| PR-302 | D1 board metadata API and board-data storage service | L | PR-101 | Authenticated CRUD with ownership enforcement |
 | PR-303 | ETag-based board data API | M | PR-302 | Conditional writes prevent silent overwrite |
 | PR-304 | Offline sync queue, retries, and conflict UI | L | PR-107, PR-303 | Offline edits converge after reconnect |
 | PR-305 | Cloud dashboard and board management | L | PR-302 | Search, rename, duplicate, trash, restore |
